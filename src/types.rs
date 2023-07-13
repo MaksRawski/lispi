@@ -32,8 +32,25 @@ impl Display for Atom {
     }
 }
 
+impl From<f64> for Atom {
+    fn from(n: f64) -> Self {
+        Atom::Number(n)
+    }
+}
+
+impl From<&str> for Atom {
+    fn from(s: &str) -> Self {
+        Atom::String(s.to_string())
+    }
+}
+impl From<String> for Atom {
+    fn from(s: String) -> Self {
+        Atom::String(s)
+    }
+}
+
 impl From<Symbol> for Atom {
-    fn from(s: Symbol) -> Atom {
+    fn from(s: Symbol) -> Self {
         Atom::Symbol(s)
     }
 }
@@ -52,6 +69,15 @@ impl Display for List {
         match self {
             List(head, tail) => f.write_fmt(format_args!("({} · {})", head, tail)),
         }
+    }
+}
+
+impl PartialEq for List {
+    fn eq(&self, other: &Self) -> bool {
+        let x = SExpression::List(self.clone());
+        let y = SExpression::List(other.clone());
+
+        x == y
     }
 }
 
@@ -86,6 +112,41 @@ impl From<Atom> for SExpression {
     fn from(l: Atom) -> SExpression {
         SExpression::Atom(l)
     }
+}
+
+impl From<f64> for SExpression {
+    fn from(n: f64) -> Self {
+        Atom::from(n).into()
+    }
+}
+
+impl From<&str> for SExpression {
+    fn from(s: &str) -> Self {
+        Atom::from(s).into()
+    }
+}
+impl From<String> for SExpression {
+    fn from(s: String) -> Self {
+        Atom::from(s).into()
+    }
+}
+
+impl From<Symbol> for SExpression {
+    fn from(s: Symbol) -> Self {
+        Atom::from(s).into()
+    }
+}
+
+#[test]
+fn test_sexp_diplay_implementation() {
+    use crate::elementary_functions::cons;
+    let expr: SExpression = cons(
+        T,
+        cons(cons((42.).into(), NIL).into(), "hello".into()).into(),
+    )
+    .into();
+
+    assert_eq!(format!("{expr}"), "(T · ((42 · Nil) · \"hello\"))")
 }
 
 // some aliases for common types
