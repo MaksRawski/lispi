@@ -32,9 +32,15 @@ impl Display for Atom {
     }
 }
 
+// TODO: replace these with generics
 impl From<f64> for Atom {
     fn from(n: f64) -> Self {
         Atom::Number(n)
+    }
+}
+impl From<i32> for Atom {
+    fn from(n: i32) -> Self {
+        Atom::Number(n.into())
     }
 }
 
@@ -45,7 +51,7 @@ impl From<&str> for Atom {
 }
 impl From<String> for Atom {
     fn from(s: String) -> Self {
-        Atom::String(s)
+        Atom::String(s.to_string())
     }
 }
 
@@ -81,7 +87,7 @@ impl PartialEq for List {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum SExpression {
     Atom(Atom),
     List(List),
@@ -102,38 +108,21 @@ impl Display for SExpression {
     }
 }
 
+impl std::fmt::Debug for SExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", &self))
+    }
+}
+
 impl From<List> for SExpression {
     fn from(l: List) -> SExpression {
         SExpression::List(l)
     }
 }
 
-impl From<Atom> for SExpression {
-    fn from(l: Atom) -> SExpression {
-        SExpression::Atom(l)
-    }
-}
-
-impl From<f64> for SExpression {
-    fn from(n: f64) -> Self {
-        Atom::from(n).into()
-    }
-}
-
-impl From<&str> for SExpression {
-    fn from(s: &str) -> Self {
-        Atom::from(s).into()
-    }
-}
-impl From<String> for SExpression {
-    fn from(s: String) -> Self {
-        Atom::from(s).into()
-    }
-}
-
-impl From<Symbol> for SExpression {
-    fn from(s: Symbol) -> Self {
-        Atom::from(s).into()
+impl<T: Into<Atom>> From<T> for SExpression {
+    fn from(t: T) -> SExpression {
+        SExpression::Atom(t.into())
     }
 }
 

@@ -19,8 +19,8 @@ pub fn cdr(x: List) -> SExpression {
     *x.1
 }
 
-pub fn cons(car: SExpression, cdr: SExpression) -> List {
-    List(Box::new(car), Box::new(cdr))
+pub fn cons(head: SExpression, tail: SExpression) -> List {
+    List(Box::new(head), Box::new(tail))
 }
 
 #[test]
