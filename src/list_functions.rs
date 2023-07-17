@@ -31,10 +31,10 @@ pub fn pair(x: SExpression, y: SExpression) -> SExpression {
     match x {
         SExpression::Atom(ax) => match y {
             SExpression::Atom(ay) => cons(ax.into(), ay.into()).into(),
-            SExpression::List(_ly) => panic!("not defined in the paper"),
+            SExpression::List(_ly) => unimplemented!("Not defined in the paper."),
         },
         SExpression::List(lx) => match y {
-            SExpression::Atom(_ay) => panic!("not defined in the paper"),
+            SExpression::Atom(_ay) => unimplemented!("Not defined in the paper."),
             SExpression::List(ly) => cons(
                 list![car(lx.clone()), car(ly.clone())].into(),
                 pair(cdr(lx), cdr(ly)),
