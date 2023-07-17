@@ -44,27 +44,33 @@ pub fn pair(x: SExpression, y: SExpression) -> SExpression {
     }
 }
 
-/// if y is a list of the form ((u1, v1 ), ..., (un, vn)) and x
-/// is one of the u’s, then assoc(x, y) is the corresponding v.
-pub fn assoc(x: Atom, y: List) -> SExpression {
-    // TODO: when x is not found in y, `compose_car_cdr` panics which
-    // provides very unhelpful message: "Can't further car/cdr"
-    let caar_y: Option<SExpression> = compose_car_cdr("caar", y.clone());
-
-    // the paper mentions cadar but what they probably meant is cadr as cadar
-    // doesn't even make sense in their example
-    let cadr_y: Option<SExpression> = compose_car_cdr("cadr", y.clone());
-
-    if let Some(SExpression::Atom(caar_y_atom)) = caar_y {
-        if eq(caar_y_atom, x.clone()) {
-            if let Some(some_cadr_y) = cadr_y {
-                return some_cadr_y;
+/// if y is a list of the form `((u1, v1 ), ..., (un, vn))` and x
+/// is one of the u’s, then `assoc(x, y)` is the corresponding v.
+pub fn assoc(x: Atom, y: List) -> Option<SExpression> {
+    if let SExpression::List(car_y) = car(y.clone()) {
+        if let SExpression::Atom(caar_y) = car(car_y) {
+            if eq(caar_y, x.clone()) {
+                // the paper mentions cadar here but what they probably meant is cadr
+                // as cadar doesn't even make sense in their example
+                return compose_car_cdr("cadr", y.clone())
+                    .or_else(|| panic!("No value is associated with {x} in {y}."));
             } else {
-                panic!("{x} is not in {y}");
+                if let SExpression::List(cdr_y_list) = cdr(y.clone()) {
+                    return assoc(x, cdr_y_list);
+                } else {
+                    eprintln!("Invalid alist! There is no associated value for {x} in {y}.");
+                    return None;
+                }
             }
         } else {
-            if let SExpression::List(cdr_y_list) = cdr(y) {
-                return assoc(x, cdr_y_list);
+            panic!("Invalid alist! Keys must be atomic, but there was: {y}");
+        }
+    } else {
+        // HACK: this was NOT mentioned in the paper but allows
+        // cons(u, v) to be a valid y
+        assoc(x, cons(y.into(), NIL))
+    }
+}
             } else {
                 panic!("Not a property list!");
             }
@@ -141,6 +147,19 @@ fn test_pair() {
 
 #[test]
 fn test_assoc() {
+    assert_eq!(
+        assoc(1.into(), list![cons(1.into(), "one".into())]),
+        Some("one".into())
+    );
+    assert_eq!(assoc(2.into(), list![cons(1.into(), "one".into())]), None);
+    assert_eq!(
+        assoc(
+            2.into(),
+            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())]
+        ),
+        Some("two".into())
+    );
+
     // assoc[X; ( (W, (A, B)), (X, (C, D)), (Y, (E, F )) )] = (C, D).
     let a: SExpression = "A".into();
     let b: SExpression = "B".into();
@@ -157,6 +176,7 @@ fn test_assoc() {
         list![x.clone(), cons(c.clone(), d.clone())],
         list![y, cons(e, f)]
     ];
-    dbg!(&list);
-    assert_eq!(assoc(x, list), cons(c, d).into());
+
+    assert_eq!(assoc(x, list), Some(cons(c, d).into()));
+}
 }

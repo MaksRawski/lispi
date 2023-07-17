@@ -89,6 +89,7 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     if let SExpression::List(l) = next_list {
         return compose_car_cdr(&next_composition, l);
     } else {
-        panic!("Can't further car/cdr: {}", next_list);
+        eprintln!("Can't {} atomic: {}", next_composition, next_list);
+        return None;
     }
 }
