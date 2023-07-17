@@ -71,12 +71,53 @@ pub fn assoc(x: Atom, y: List) -> Option<SExpression> {
         assoc(x, cons(y.into(), NIL))
     }
 }
+
+/// Auxiliary function for sublis.
+/// Checks each pair from x, where x is of the form `((u1,v1), ..., (un,vn))`
+/// and when u is equal to z then replaces it with a corresponding v.
+/// Returns the z after all substitutions.
+fn sub2(x: List, z: Atom) -> Atom {
+    if let SExpression::List(car_x) = car(x.clone()) {
+        if let SExpression::Atom(caar_x) = car(car_x.clone()) {
+            if eq(caar_x, z.clone()) {
+                match cdr(car_x) {
+                    SExpression::Atom(cadr_x) => return cadr_x,
+                    SExpression::List(_cadr_x) => {
+                        todo!("must v be atomic?");
+                    }
+                }
             } else {
-                panic!("Not a property list!");
+                dbg!(&x);
+                match cdr(x) {
+                    SExpression::Atom(_cdr_x) => return z,
+                    SExpression::List(cdr_x) => return sub2(cdr_x, z),
+                }
             }
+        } else {
+            panic!("Invalid alist! There is no associated value for {x} in {z}.");
         }
     } else {
-        panic!("Not a property list!");
+        // HACK: similar to what i've done in assoc:
+        // allows cons(u, v) to be a valid x
+        sub2(cons(x.into(), NIL), z)
+    }
+}
+
+/// Checks each pair from x, where x is of the form `((u1,v1), ..., (un,vn))`
+/// and if a un is found in y then it's substituted for the corresponding vn.
+///
+/// Example:
+/// ```common-lisp
+/// (sublis '((1 . "one") (2 . "two") (3 . "three"))
+///          '(3 2 1))
+///         = ("three" "two" "one")
+/// ```
+pub fn sublis(x: List, y: SExpression) -> SExpression {
+    match y.clone() {
+        SExpression::Atom(ay) => sub2(x.into(), ay).into(),
+        SExpression::List(ly) => {
+            cons(sublis(x.clone(), car(ly.clone())), sublis(x, cdr(ly))).into()
+        }
     }
 }
 
@@ -179,4 +220,85 @@ fn test_assoc() {
 
     assert_eq!(assoc(x, list), Some(cons(c, d).into()));
 }
+
+#[test]
+fn test_sub2() {
+    assert_eq!(
+        sub2(list![cons(1.into(), "one".into())].into(), 1.into()),
+        "one".into()
+    );
+    assert_eq!(
+        sub2(list![cons(1.into(), "one".into())].into(), 2.into()),
+        2.into()
+    );
+    assert_eq!(
+        sub2(
+            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
+            1.into()
+        ),
+        "one".into()
+    );
+
+    assert_eq!(
+        sub2(
+            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
+            2.into()
+        ),
+        "two".into()
+    );
+    assert_eq!(
+        sub2(
+            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
+            3.into()
+        ),
+        3.into()
+    );
+}
+
+#[test]
+fn test_sublis() {
+    assert_eq!(
+        sublis(
+            list![
+                cons(1.into(), "one".into()),
+                cons(2.into(), "two".into()),
+                cons(3.into(), "three".into())
+            ],
+            list![1].into()
+        ),
+        list!["one"].into()
+    );
+    assert_eq!(
+        sublis(
+            list![
+                cons(1.into(), "one".into()),
+                cons(2.into(), "two".into()),
+                cons(3.into(), "three".into())
+            ],
+            list![3, 2, 1].into()
+        ),
+        list!["three", "two", "one"].into()
+    );
+    assert_eq!(
+        sublis(
+            list![
+                cons(1.into(), "one".into()),
+                cons(2.into(), "two".into()),
+                cons(3.into(), "three".into())
+            ],
+            list![3, 2, 42].into()
+        ),
+        list!["three", "two", 42].into()
+    );
+    assert_eq!(
+        sublis(
+            list![
+                cons(1.into(), "one".into()),
+                cons(2.into(), "two".into()),
+                cons(3.into(), "three".into())
+            ],
+            list![4].into()
+        ),
+        list![4].into()
+    );
 }
