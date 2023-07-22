@@ -1,17 +1,54 @@
 use std::fmt::Display;
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Bool {
+    T,
+    NIL,
+}
+pub const T: Bool = Bool::T;
+pub const NIL: Bool = Bool::NIL;
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ElementaryFunction {
+    CAR,
+    CDR,
+    CONS,
+    EQ,
+    ATOM,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Symbol {
-    T,
-    Nil,
+    LAMBDA,
+    LABEL,
+    QUOTE,
+    COND,
+    ElementaryFunction(ElementaryFunction),
+    Other(String),
+}
+
+impl From<ElementaryFunction> for Symbol {
+    fn from(f: ElementaryFunction) -> Self {
+        Symbol::ElementaryFunction(f)
+    }
+}
+impl From<Bool> for Atom {
+    fn from(b: Bool) -> Self {
+        match b {
+            Bool::T => Self::Bool(Bool::T),
+            Bool::NIL => Self::Bool(Bool::NIL),
+        }
+    }
+}
+impl From<String> for Symbol {
+    fn from(s: String) -> Self {
+        Self::Other(s)
+    }
 }
 
 impl Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Symbol::T => f.write_fmt(format_args!("T")),
-            Symbol::Nil => f.write_fmt(format_args!("Nil")),
-        }
+        f.write_fmt(format_args!("{:?}", self))
     }
 }
 
@@ -20,14 +57,25 @@ pub enum Atom {
     Number(f64),
     String(String),
     Symbol(Symbol),
+    Bool(Bool),
 }
 
 impl Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(str) => f.write_fmt(format_args!("{:?}", str)),
             Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
+            Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
+            Atom::String(s) => f.write_fmt(format_args!("{:?}", s)),
+            Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+        }
+    }
+}
+
+impl From<bool> for Atom {
+    fn from(value: bool) -> Self {
+        match value {
+            true => T.into(),
+            false => NIL.into(),
         }
     }
 }
@@ -43,25 +91,18 @@ impl From<i32> for Atom {
         Atom::Number(n.into())
     }
 }
-
 impl From<&str> for Atom {
     fn from(s: &str) -> Self {
         Atom::String(s.to_string())
     }
 }
-impl From<String> for Atom {
-    fn from(s: String) -> Self {
-        Atom::String(s.to_string())
+impl<T: Into<Symbol>> From<T> for Atom {
+    fn from(s: T) -> Self {
+        Atom::Symbol(s.into())
     }
 }
 
-impl From<Symbol> for Atom {
-    fn from(s: Symbol) -> Self {
-        Atom::Symbol(s)
-    }
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct List(pub Box<SExpression>, pub Box<SExpression>);
 
 impl List {
@@ -78,12 +119,24 @@ impl Display for List {
     }
 }
 
-impl PartialEq for List {
-    fn eq(&self, other: &Self) -> bool {
-        let x = SExpression::List(self.clone());
-        let y = SExpression::List(other.clone());
+#[derive(Clone, Debug, PartialEq)]
+pub enum NullableList {
+    List(List),
+    NIL,
+}
 
-        x == y
+impl From<List> for NullableList {
+    fn from(l: List) -> Self {
+        Self::List(l)
+    }
+}
+
+impl From<Bool> for NullableList {
+    fn from(b: Bool) -> Self {
+        match b {
+            Bool::NIL => Self::NIL,
+            Bool::T => panic!("Tried to convert T into a NullableList!"),
+        }
     }
 }
 
@@ -110,13 +163,25 @@ impl Display for SExpression {
 
 impl std::fmt::Debug for SExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", &self))
+        match self {
+            SExpression::Atom(a) => f.write_fmt(format_args!("{}", a)),
+            SExpression::List(l) => f.write_fmt(format_args!("{}", l)),
+        }
     }
 }
 
 impl From<List> for SExpression {
     fn from(l: List) -> SExpression {
         SExpression::List(l)
+    }
+}
+
+impl From<NullableList> for SExpression {
+    fn from(nl: NullableList) -> Self {
+        match nl {
+            NullableList::List(l) => l.into(),
+            NullableList::NIL => NIL.into(),
+        }
     }
 }
 
@@ -129,15 +194,12 @@ impl<T: Into<Atom>> From<T> for SExpression {
 #[test]
 fn test_sexp_diplay_implementation() {
     use crate::elementary_functions::cons;
+
     let expr: SExpression = cons(
-        T,
-        cons(cons((42.).into(), NIL).into(), "hello".into()).into(),
+        T.into(),
+        cons(cons(42.into(), NIL.into()).into(), "hello".into()).into(),
     )
     .into();
 
-    assert_eq!(format!("{expr}"), "(T · ((42 · Nil) · \"hello\"))")
+    assert_eq!(format!("{expr}"), "(T · ((42 · NIL) · \"hello\"))")
 }
-
-// some aliases for common types
-pub const NIL: SExpression = SExpression::Atom(Atom::Symbol(Symbol::Nil));
-pub const T: SExpression = SExpression::Atom(Atom::Symbol(Symbol::T));

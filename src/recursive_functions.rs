@@ -44,53 +44,42 @@ pub fn equal(x: SExpression, y: SExpression) -> bool {
     }
 }
 
-/// predicate which checks if S-Expression is basically Nil
+/// predicate which checks if S-Expression is NIL
 pub fn null(x: SExpression) -> bool {
     match x {
-        SExpression::Atom(a) => eq(a, Atom::Symbol(Symbol::Nil)),
+        SExpression::Atom(a) => eq(a, NIL.into()),
         SExpression::List(_) => false,
     }
 }
 
 #[test]
 fn test_ff() {
-    const A: SExpression = SExpression::Atom(Atom::Number(1.));
-    const B: SExpression = SExpression::Atom(Atom::Number(2.));
-    const C: SExpression = SExpression::Atom(Atom::Number(3.));
-
-    let ff_example_list = cons(cons(A, B).into(), C);
-    dbg!(ff_example_list.clone());
-
-    let ff_result = ff(ff_example_list.into());
-    dbg!(ff_result.clone());
-
-    assert_eq!(ff_result, Atom::Number(1.));
+    assert_eq!(
+        ff(cons(cons("A".into(), "B".into()).into(), "C".into()).into()),
+        "A".into()
+    );
 }
 
 #[test]
-fn test_subst_display() {
-    // subst[(X · A); B; ((A · B) · C)] = ((A · (X · A)) · C)
-    const X: SExpression = SExpression::Atom(Atom::Number(1.));
-    const A: SExpression = NIL;
-    const B: Atom = Atom::Symbol(Symbol::T);
-    const C: SExpression = SExpression::Atom(Atom::Number(2.));
-
-    let x: SExpression = cons(X, A).into();
-    let y: Atom = B;
-    let z: SExpression = cons(cons(A, B.into()).into(), C).into();
-
-    // not bothering this time with manual checking and instead using
-    // the Display implementation to check the human readable representation
+fn test_subst() {
     assert_eq!(
-        format!("{}", subst(x, y, z)),
-        format!("(({A} · ({X} · {A})) · {C})")
+        subst("A".into(), 1.into(), cons(1.into(), 2.into()).into()),
+        cons("A".into(), 2.into()).into()
+    );
+    assert_eq!(
+        subst(
+            "A".into(),
+            1.into(),
+            cons(cons(1.into(), 2.into()).into(), 1.into()).into()
+        ),
+        cons(cons("A".into(), 2.into()).into(), "A".into()).into()
     );
 }
 
 #[test]
 fn test_equal() {
-    let x: SExpression = cons(cons(T, T).into(), NIL).into();
-    let y: SExpression = cons(cons(T, NIL).into(), NIL).into();
+    let x: SExpression = cons(cons(T.into(), T.into()).into(), NIL.into()).into();
+    let y: SExpression = cons(cons(T.into(), NIL.into()).into(), NIL.into()).into();
 
     assert!(equal(x.clone(), x.clone()));
     assert!(!equal(x, y));
@@ -98,7 +87,7 @@ fn test_equal() {
 
 #[test]
 fn test_null() {
-    assert!(null(NIL));
-    assert!(!null(T));
-    assert!(!null(cons(NIL, NIL).into()));
+    assert!(null(NIL.into()));
+    assert!(!null(T.into()));
+    assert!(!null(cons(NIL.into(), NIL.into()).into()));
 }

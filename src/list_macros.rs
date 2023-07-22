@@ -11,7 +11,7 @@ macro_rules! list {
         use $crate::elementary_functions::*;
         use $crate::types::*;
         let head: SExpression = $head.into();
-        cons(head, NIL)
+        cons(head, NIL.into())
     }};
 
     ( $head:expr, $tail:expr ) => {{
@@ -31,14 +31,15 @@ macro_rules! list {
     }};
 }
 
-// - make list! macro accesible via its real path
-// - #[macro_export] makes the macro accessible from the crate root
+// because list is such a generic name and since `#[macro_export]` by default
+// exports into the global scope, the line below is there to allow
+// reffering to this macro by its path
 pub use list;
 
 #[test]
 fn test_list_macro() {
-    assert_eq!(list![T], cons(T, NIL).into());
-    assert_eq!(list![T, T], cons(T, T).into());
+    assert_eq!(list![T], cons(T.into(), NIL.into()));
+    assert_eq!(list![T, T], cons(T.into(), T.into()).into());
 
     assert_eq!(
         list![1, 2, 3],
@@ -65,7 +66,7 @@ fn test_list_macro() {
 /// assert_eq!(compose_car_cdr("cdar", list.clone()), Some(3.into()));
 /// assert_eq!(compose_car_cdr("cddr", list.clone()), Some(4.into()));
 /// ```
-pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
+pub(crate) fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
     if car_cdr_composition == "car" {
         return Some(car(list));
     } else if car_cdr_composition == "cdr" {
@@ -89,7 +90,17 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     if let SExpression::List(l) = next_list {
         return compose_car_cdr(&next_composition, l);
     } else {
+        // we can't just panic here because this function will be called with
+        // user provided input so when this function fails user should be provided
+        // with a message appropriate to the situation
+        //
+        // those 2 lines below are just for deubgging purposes and probably
+        // could (and should) be removed if all uses of this function
+        // throught this crate have descriptive messages
+
         eprintln!("Can't {} atomic: {}", next_composition, next_list);
+        dbg!(car_cdr_composition, list);
+
         return None;
     }
 }
