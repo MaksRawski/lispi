@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use crate::elementary_functions::{car, cdr};
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Bool {
     T,
@@ -113,10 +115,46 @@ impl List {
 
 impl Display for List {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            List(head, tail) => f.write_fmt(format_args!("({} · {})", head, tail)),
+        // match self {
+        //     List(head, tail) => f.write_fmt(format_args!("({} . {})", head, tail)),
+        // }
+        let car_l = car(self.clone());
+        match cdr(self.clone()) {
+            SExpression::Atom(atom_cdr) => f.write_fmt(format_args!("({} . {})", car_l, atom_cdr)),
+            SExpression::List(_) => f.write_fmt(format_args!("[{}]", disp_list(self.clone()))),
         }
     }
+}
+
+/// helper function for prettier displaying of lists
+/// that is: display [1, 2, 3] instead of (1 . (2 . 3))
+fn disp_list(l: List) -> String {
+    let car_l = car(l.clone());
+    match cdr(l) {
+        SExpression::Atom(cdr_l) => match cdr_l {
+            Atom::Bool(Bool::NIL) => format!("{}", car_l),
+            _ => format!("{}, {}", car_l, cdr_l),
+        },
+        SExpression::List(cdr_l) => format!("{}, {}", car_l, disp_list(cdr_l)),
+    }
+}
+#[test]
+fn test_display_list() {
+    use crate::list;
+    assert_eq!(format!("{}", list![1]), "(1 . NIL)");
+    assert_eq!(format!("{}", list![1, 2]), "(1 . 2)");
+    assert_eq!(format!("{}", list![1, 2, 3]), "[1, 2, 3]");
+    assert_eq!(format!("{}", list![1, 2, 3, 4]), "[1, 2, 3, 4]");
+
+    assert_eq!(format!("{}", list![list![1, 2], 3]), "((1 . 2) . 3)");
+    assert_eq!(format!("{}", list![list![1, 2], 3, 4]), "[(1 . 2), 3, 4]");
+    assert_eq!(format!("{}", list![1, list![2, 3], 4]), "[1, (2 . 3), 4]");
+    // TODO: how should we display sth like below?
+    // dbg!(disp_list(list![list![1, 2], list![3, 4]]));
+    // assert_eq!(
+    //     format!("{}", list![list![1, 2], list![3, 4]]),
+    //     "[(1 . 2) . (3 . 4)]"
+    // );
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -189,17 +227,4 @@ impl<T: Into<Atom>> From<T> for SExpression {
     fn from(t: T) -> SExpression {
         SExpression::Atom(t.into())
     }
-}
-
-#[test]
-fn test_sexp_diplay_implementation() {
-    use crate::elementary_functions::cons;
-
-    let expr: SExpression = cons(
-        T.into(),
-        cons(cons(42.into(), NIL.into()).into(), "hello".into()).into(),
-    )
-    .into();
-
-    assert_eq!(format!("{expr}"), "(T · ((42 · NIL) · \"hello\"))")
 }
