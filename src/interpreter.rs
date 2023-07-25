@@ -35,7 +35,7 @@ fn handle_lambda(e: List, a: NullableList) -> SExpression {
         ),
     };
 
-    let expression = compose_car_cdr("caddr", e.clone()).unwrap_or_else(|| {
+    let expression = compose_car_cdr("cddar", e.clone()).unwrap_or_else(|| {
         panic!(
             "Invalid use of LAMBDA: {}, third argument should be an S-expression.",
             e
@@ -87,7 +87,7 @@ fn handle_label(e: List, a: NullableList) -> SExpression {
     };
 
     // 3rd argument should be a lambda which itself has a LAMBDA symbol as the first argument
-    let lambda = match compose_car_cdr("caddr", e.clone()) {
+    let lambda = match compose_car_cdr("cddar", e.clone()) {
         Some(SExpression::List(l)) => match car(l.clone()) {
             SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => l,
             _ => panic!(

@@ -62,26 +62,28 @@ fn test_list_macro() {
 /// let list = list![list![1,2], list![3,4]];
 ///
 /// assert_eq!(compose_car_cdr("caar", list.clone()), Some(1.into()));
-/// assert_eq!(compose_car_cdr("cadr", list.clone()), Some(2.into()));
-/// assert_eq!(compose_car_cdr("cdar", list.clone()), Some(3.into()));
+/// assert_eq!(compose_car_cdr("cdar", list.clone()), Some(2.into()));
+/// assert_eq!(compose_car_cdr("cadr", list.clone()), Some(3.into()));
 /// assert_eq!(compose_car_cdr("cddr", list.clone()), Some(4.into()));
 /// ```
-pub(crate) fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
+pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
     if car_cdr_composition == "car" {
         return Some(car(list));
     } else if car_cdr_composition == "cdr" {
         return Some(cdr(list));
     }
 
-    // skip the top most car/cdr
+    // skip the inner most car/cdr
     let next_composition = format!(
-        "c{}",
-        &car_cdr_composition.chars().skip(2).collect::<String>()
+        "{}r",
+        &car_cdr_composition
+            .get(0..(car_cdr_composition.len() - 2))
+            .unwrap_or_else(|| panic!("Invalid composition: {}", car_cdr_composition))
     );
 
-    let next_list = if car_cdr_composition.starts_with("ca") {
+    let next_list = if car_cdr_composition.ends_with("ar") {
         car(list.clone())
-    } else if car_cdr_composition.starts_with("cd") {
+    } else if car_cdr_composition.ends_with("dr") {
         cdr(list.clone())
     } else {
         panic!("invalid composition: {}", car_cdr_composition);
