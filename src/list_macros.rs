@@ -19,7 +19,7 @@ macro_rules! list {
         use $crate::types::*;
         let head: SExpression = $head.into();
         let tail: SExpression = $tail.into();
-        cons(head, tail)
+        cons(head, cons(tail, NIL.into()).into())
     }};
 
     ( $head:expr, $($tail:expr),* ) => {{
@@ -39,17 +39,27 @@ pub use list;
 #[test]
 fn test_list_macro() {
     assert_eq!(list![T], cons(T.into(), NIL.into()));
-    assert_eq!(list![T, T], cons(T.into(), T.into()).into());
+    assert_eq!(
+        list![T, T],
+        cons(T.into(), cons(T.into(), NIL.into()).into()).into()
+    );
 
     assert_eq!(
         list![1, 2, 3],
-        cons(1.into(), cons(2.into(), 3.into()).into())
+        cons(
+            1.into(),
+            cons(2.into(), cons(3.into(), NIL.into()).into()).into()
+        )
     );
 
     let macro_list = list![1, list![2, 3], 4];
     let cons_list = cons(
         1.into(),
-        cons(cons(2.into(), 3.into()).into(), 4.into()).into(),
+        cons(
+            cons(2.into(), cons(3.into(), NIL.into()).into()).into(),
+            cons(4.into(), NIL.into()).into(),
+        )
+        .into(),
     );
     assert_eq!(macro_list, cons_list);
 }

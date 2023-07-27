@@ -115,19 +115,21 @@ impl List {
 
 impl Display for List {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        // match self {
-        //     List(head, tail) => f.write_fmt(format_args!("({} . {})", head, tail)),
-        // }
-        let car_l = car(self.clone());
-        match cdr(self.clone()) {
-            SExpression::Atom(atom_cdr) => f.write_fmt(format_args!("({} . {})", car_l, atom_cdr)),
-            SExpression::List(_) => f.write_fmt(format_args!("[{}]", disp_list(self.clone()))),
+        if is_cons(self.clone()) {
+            f.write_fmt(format_args!(
+                "({} . {})",
+                car(self.clone()),
+                cdr(self.clone())
+            ))
+        } else {
+            f.write_fmt(format_args!("[{}]", disp_list(self.clone())))
         }
     }
 }
 
-/// helper function for prettier displaying of lists
-/// that is: display [1, 2, 3] instead of (1 . (2 . 3))
+/// helper function for prettier displaying of lists that is:
+/// display [1, 2, 3] instead of (1 . (2 . (3 . NIL)))
+/// but display: (1 . (2 . 3)) when the last element is not a NIL pointer
 fn disp_list(l: List) -> String {
     let car_l = car(l.clone());
     match cdr(l) {
@@ -138,23 +140,64 @@ fn disp_list(l: List) -> String {
         SExpression::List(cdr_l) => format!("{}, {}", car_l, disp_list(cdr_l)),
     }
 }
+
+/// determines if a list is a _cons_ object that is:
+/// it's not a list because the right most element is not NIL
+fn is_cons(l: List) -> bool {
+    match cdr(l) {
+        SExpression::Atom(a) => a != NIL.into(),
+        SExpression::List(cdr_l) => is_cons(cdr_l),
+    }
+}
+
 #[test]
 fn test_display_list() {
+    use crate::elementary_functions::cons;
     use crate::list;
-    assert_eq!(format!("{}", list![1]), "(1 . NIL)");
-    assert_eq!(format!("{}", list![1, 2]), "(1 . 2)");
+    assert_eq!(format!("{}", cons(1.into(), 2.into())), "(1 . 2)");
+    assert_eq!(
+        format!("{}", cons(1.into(), cons(2.into(), 3.into()).into())),
+        "(1 . (2 . 3))"
+    );
+    assert_eq!(
+        format!("{}", cons(cons(1.into(), 2.into()).into(), 3.into())),
+        "((1 . 2) . 3)"
+    );
+    assert_eq!(
+        format!(
+            "{}",
+            cons(
+                cons(1.into(), 2.into()).into(),
+                cons(3.into(), 4.into()).into()
+            )
+        ),
+        "((1 . 2) . (3 . 4))"
+    );
+
+    assert_eq!(format!("{}", list![1]), "[1]");
+    assert_eq!(format!("{}", list![1, 2]), "[1, 2]");
     assert_eq!(format!("{}", list![1, 2, 3]), "[1, 2, 3]");
     assert_eq!(format!("{}", list![1, 2, 3, 4]), "[1, 2, 3, 4]");
 
-    assert_eq!(format!("{}", list![list![1, 2], 3]), "((1 . 2) . 3)");
-    assert_eq!(format!("{}", list![list![1, 2], 3, 4]), "[(1 . 2), 3, 4]");
-    assert_eq!(format!("{}", list![1, list![2, 3], 4]), "[1, (2 . 3), 4]");
-    // TODO: how should we display sth like below?
-    // dbg!(disp_list(list![list![1, 2], list![3, 4]]));
-    // assert_eq!(
-    //     format!("{}", list![list![1, 2], list![3, 4]]),
-    //     "[(1 . 2) . (3 . 4)]"
-    // );
+    assert_eq!(format!("{}", list![list![1, 2], 3]), "[[1, 2], 3]");
+    assert_eq!(format!("{}", list![list![1, 2], 3, 4]), "[[1, 2], 3, 4]");
+    assert_eq!(format!("{}", list![1, list![2, 3], 4]), "[1, [2, 3], 4]");
+    assert_eq!(format!("{}", list![1, 2, list![3, 4]]), "[1, 2, [3, 4]]");
+    assert_eq!(
+        format!("{}", list![list![1, 2], list![3, 4]]),
+        "[[1, 2], [3, 4]]"
+    );
+    assert_eq!(
+        format!(
+            "{}",
+            list![cons(1.into(), 2.into()), cons(3.into(), 4.into())]
+        ),
+        "[(1 . 2), (3 . 4)]"
+    );
+    assert_eq!(
+        format!("{}", cons(list![1, 2].into(), list![3, 4].into())),
+        "([1, 2] . [3, 4])"
+    );
 }
 
 #[derive(Clone, Debug, PartialEq)]

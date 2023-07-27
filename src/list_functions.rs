@@ -18,7 +18,10 @@ pub fn append(x: SExpression, y: SExpression) -> SExpression {
 /// predicate which checks if x occurs among elements of y
 pub fn among(x: SExpression, y: SExpression) -> bool {
     match y {
-        SExpression::Atom(_) => !null(y),
+        SExpression::Atom(a_y) => match x {
+            SExpression::Atom(a_x) => eq(a_x, a_y),
+            SExpression::List(_) => false,
+        },
         SExpression::List(l) => equal(x.clone(), car(l.clone())) || among(x, cdr(l)),
     }
 }
@@ -52,7 +55,7 @@ pub fn pair(x: SExpression, y: SExpression) -> NullableList {
                 // )
             }
             SExpression::List(list_y) => cons(
-                list![car(list_x.clone()), car(list_y.clone())].into(),
+                cons(car(list_x.clone()).into(), car(list_y.clone()).into()).into(),
                 pair(cdr(list_x), cdr(list_y)).into(),
             )
             .into(),
@@ -218,13 +221,13 @@ fn test_append() {
 
 #[test]
 fn test_among() {
-    assert!(among((42.).into(), list![1, 2, 3, 42, NIL].into()));
-    assert!(!among(T.into(), list![1, 2, 3, 42, NIL].into()));
+    assert!(among((42.).into(), list![1, 2, 3, 42].into()));
+    assert_eq!(among(T.into(), list![1, 2, 3, 42].into()), false);
 }
 
 #[test]
 fn test_pair() {
-    assert_eq!(pair(T.into(), T.into()), list![T, T].into());
+    assert_eq!(pair(T.into(), T.into()), cons(T.into(), T.into()).into());
 
     // these 2 tests even though intuitively make sense (and would work with a python zip)
     // are undefined behaviour in LISP
@@ -251,9 +254,13 @@ fn test_pair() {
     let input_y = list![x.clone(), list![y.clone(), z.clone()], u.clone()];
     let output = pair(input_x.clone().into(), input_y.clone().into());
 
-    let expected_output = list![list![a, x], list![b, list![y, z]], list![c, u]].into();
+    let expected_output = list![
+        cons(a.into(), x.into()),
+        cons(b.into(), list![y, z].into()),
+        cons(c.into(), u.into())
+    ];
 
-    assert_eq!(output, expected_output);
+    assert_eq!(output, expected_output.into());
 }
 
 #[test]
@@ -302,9 +309,9 @@ fn test_assoc() {
     let y: SExpression = "Y".into();
 
     let list = list![
-        list![w, cons(a, b)],
-        list![x.clone(), cons(c.clone(), d.clone())],
-        list![y, cons(e, f)]
+        cons(w.into(), cons(a, b).into()),
+        cons(x.clone().into(), cons(c.clone(), d.clone()).into()),
+        cons(y, cons(e, f).into())
     ];
 
     assert_eq!(assoc_v(x, list), Some(cons(c, d).into()));

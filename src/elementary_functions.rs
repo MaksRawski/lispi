@@ -34,19 +34,22 @@ fn test_atom() {
 fn test_eq() {
     assert!(eq(1.into(), 1.into()));
     assert!(eq(T.into(), T.into()));
+    assert!(eq("X".into(), "X".into()));
     assert!(!eq(1.into(), 2.into()));
     assert!(!eq(T.into(), NIL.into()));
     assert!(!eq(1.into(), NIL.into()));
+    assert!(!eq("X".into(), NIL.into()));
 }
 
 #[test]
 fn test_car() {
-    assert_eq!(car(List::new(T.into(), NIL.into())), T.into());
+    assert_eq!(car(List::new("A".into(), "B".into())), "A".into());
 }
 
 #[test]
 fn test_cdr() {
-    assert_eq!(cdr(List::new(T.into(), NIL.into())), NIL.into());
+    assert_eq!(cdr(List::new("A".into(), NIL.into())), NIL.into());
+    assert_eq!(cdr(List::new("A".into(), "B".into())), "B".into());
 }
 
 #[test]
