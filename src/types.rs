@@ -154,23 +154,11 @@ fn is_cons(l: List) -> bool {
 fn test_display_list() {
     use crate::elementary_functions::cons;
     use crate::list;
-    assert_eq!(format!("{}", cons(1.into(), 2.into())), "(1 . 2)");
+    assert_eq!(format!("{}", cons(1, 2)), "(1 . 2)");
+    assert_eq!(format!("{}", cons(1, cons(2, 3))), "(1 . (2 . 3))");
+    assert_eq!(format!("{}", cons(cons(1, 2), 3)), "((1 . 2) . 3)");
     assert_eq!(
-        format!("{}", cons(1.into(), cons(2.into(), 3.into()).into())),
-        "(1 . (2 . 3))"
-    );
-    assert_eq!(
-        format!("{}", cons(cons(1.into(), 2.into()).into(), 3.into())),
-        "((1 . 2) . 3)"
-    );
-    assert_eq!(
-        format!(
-            "{}",
-            cons(
-                cons(1.into(), 2.into()).into(),
-                cons(3.into(), 4.into()).into()
-            )
-        ),
+        format!("{}", cons(cons(1, 2), cons(3, 4))),
         "((1 . 2) . (3 . 4))"
     );
 
@@ -188,10 +176,7 @@ fn test_display_list() {
         "[[1, 2], [3, 4]]"
     );
     assert_eq!(
-        format!(
-            "{}",
-            list![cons(1.into(), 2.into()), cons(3.into(), 4.into())]
-        ),
+        format!("{}", list![cons(1, 2), cons(3, 4)]),
         "[(1 . 2), (3 . 4)]"
     );
     assert_eq!(

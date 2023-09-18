@@ -19,8 +19,12 @@ pub fn cdr(x: List) -> SExpression {
     *x.1
 }
 
-pub fn cons(head: SExpression, tail: SExpression) -> List {
-    List(Box::new(head), Box::new(tail))
+pub fn cons<H, T>(head: H, tail: T) -> List
+where
+    H: Into<SExpression>,
+    T: Into<SExpression>,
+{
+    List(Box::new(head.into()), Box::new(tail.into()))
 }
 
 #[test]
@@ -55,11 +59,11 @@ fn test_cdr() {
 #[test]
 fn test_cons_car_cdr() {
     // same tests as above but using cons for constructing lists
-    assert_eq!(car(cons(T.into(), NIL.into())), T.into());
+    assert_eq!(car(cons(T, NIL)), T.into());
 
-    assert_eq!(cdr(cons(T.into(), NIL.into())), NIL.into());
+    assert_eq!(cdr(cons(T, NIL)), NIL.into());
 
-    let x: List = cons(T.into(), NIL.into());
+    let x: List = cons(T, NIL);
     let expr: List = cons(car(x.clone()), cdr(x.clone()));
 
     assert_eq!(x, expr);

@@ -11,7 +11,7 @@ macro_rules! list {
         use $crate::elementary_functions::*;
         use $crate::types::*;
         let head: SExpression = $head.into();
-        cons(head, NIL.into())
+        cons(head, NIL)
     }};
 
     ( $head:expr, $tail:expr ) => {{
@@ -19,7 +19,7 @@ macro_rules! list {
         use $crate::types::*;
         let head: SExpression = $head.into();
         let tail: SExpression = $tail.into();
-        cons(head, cons(tail, NIL.into()).into())
+        cons(head, cons(tail, NIL))
     }};
 
     ( $head:expr, $($tail:expr),* ) => {{
@@ -27,7 +27,7 @@ macro_rules! list {
         use $crate::types::*;
         let head: SExpression = $head.into();
         let tail: List = list!($($tail),*);
-        cons(head, tail.into())
+        cons(head, tail)
     }};
 }
 
@@ -38,29 +38,13 @@ pub use list;
 
 #[test]
 fn test_list_macro() {
-    assert_eq!(list![T], cons(T.into(), NIL.into()));
-    assert_eq!(
-        list![T, T],
-        cons(T.into(), cons(T.into(), NIL.into()).into()).into()
-    );
+    assert_eq!(list![T], cons(T, NIL));
+    assert_eq!(list![T, T], cons(T, cons(T, NIL)).into());
 
-    assert_eq!(
-        list![1, 2, 3],
-        cons(
-            1.into(),
-            cons(2.into(), cons(3.into(), NIL.into()).into()).into()
-        )
-    );
+    assert_eq!(list![1, 2, 3], cons(1, cons(2, cons(3, NIL))));
 
     let macro_list = list![1, list![2, 3], 4];
-    let cons_list = cons(
-        1.into(),
-        cons(
-            cons(2.into(), cons(3.into(), NIL.into()).into()).into(),
-            cons(4.into(), NIL.into()).into(),
-        )
-        .into(),
-    );
+    let cons_list = cons(1, cons(cons(2, cons(3, NIL)), cons(4, NIL)));
     assert_eq!(macro_list, cons_list);
 }
 

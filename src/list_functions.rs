@@ -10,8 +10,8 @@ pub fn append(x: SExpression, y: SExpression) -> SExpression {
         return y;
     }
     match x {
-        SExpression::List(l) => cons(car(l.clone()), append(cdr(l), y).into()).into(),
-        SExpression::Atom(a) => cons(a.into(), y).into(),
+        SExpression::List(l) => cons(car(l.clone()), append(cdr(l), y)).into(),
+        SExpression::Atom(a) => cons(a, y).into(),
     }
 }
 
@@ -35,9 +35,9 @@ pub fn pair(x: SExpression, y: SExpression) -> NullableList {
     }
     match x {
         SExpression::Atom(atom_x) => match y {
-            SExpression::Atom(atom_y) => cons(atom_x.into(), atom_y.into()).into(),
+            SExpression::Atom(atom_y) => cons(atom_x, atom_y).into(),
             SExpression::List(list_y) => {
-                cons(atom_x.into(), list_y.into()).into()
+                cons(atom_x, list_y).into()
                 // unimplemented!(
                 //     "Tried to pair an Atom with a List:\n{:?}\n{:?}",
                 //     atom_x,
@@ -47,7 +47,7 @@ pub fn pair(x: SExpression, y: SExpression) -> NullableList {
         },
         SExpression::List(list_x) => match y {
             SExpression::Atom(atom_y) => {
-                cons(list_x.into(), atom_y.into()).into()
+                cons(list_x, atom_y).into()
                 // unimplemented!(
                 //     "Tried to pair a List with an Atom:\n{:?}\n{:?}",
                 //     list_x,
@@ -55,8 +55,8 @@ pub fn pair(x: SExpression, y: SExpression) -> NullableList {
                 // )
             }
             SExpression::List(list_y) => cons(
-                cons(car(list_x.clone()).into(), car(list_y.clone()).into()).into(),
-                pair(cdr(list_x), cdr(list_y)).into(),
+                cons(car(list_x.clone()), car(list_y.clone())),
+                pair(cdr(list_x), cdr(list_y)),
             )
             .into(),
         },
@@ -74,9 +74,7 @@ pub fn pairlis(x: SExpression, y: SExpression, a: List) -> List {
     }
     match x {
         SExpression::Atom(atom_x) => match y {
-            SExpression::Atom(atom_y) => {
-                cons(cons(atom_x.into(), atom_y.into()).into(), a.into()).into()
-            }
+            SExpression::Atom(atom_y) => cons(cons(atom_x, atom_y), a).into(),
             SExpression::List(list_y) => {
                 unimplemented!(
                     "Tried to pair an Atom with a List:\n{:?}\n{:?}",
@@ -94,8 +92,8 @@ pub fn pairlis(x: SExpression, y: SExpression, a: List) -> List {
                 )
             }
             SExpression::List(list_y) => cons(
-                list![car(list_x.clone()), car(list_y.clone())].into(),
-                pairlis(cdr(list_x), cdr(list_y), a).into(),
+                list![car(list_x.clone()), car(list_y.clone())],
+                pairlis(cdr(list_x), cdr(list_y), a),
             )
             .into(),
         },
@@ -144,7 +142,7 @@ pub fn assoc_v(x: Atom, y: List) -> Option<SExpression> {
     } else {
         // HACK: this was NOT mentioned in the paper but allows
         // cons(u, v) to be a valid y
-        assoc_v(x, cons(y.into(), NIL.into()))
+        assoc_v(x, cons(y, NIL))
     }
 }
 
@@ -174,7 +172,7 @@ fn sub2(x: List, z: Atom) -> Atom {
     } else {
         // HACK: similar to what i've done in assoc:
         // allows cons(u, v) to be a valid x
-        sub2(cons(x.into(), NIL.into()), z)
+        sub2(cons(x, NIL), z)
     }
 }
 
@@ -202,20 +200,12 @@ fn test_append() {
     // we will set:
     // x = (A, B),
     // y = (C, D, E)
-    let x: SExpression = cons((1.).into(), (2.).into()).into();
-    let y: SExpression = cons((3.).into(), cons((4.).into(), (5.).into()).into()).into();
+    let x: SExpression = cons(1., 2.).into();
+    let y: SExpression = cons(3., cons(4., 5.)).into();
 
     // this is REALLY ugly but to create a macro that would create the list directly
     // we first need a _working_ append
-    let res: SExpression = cons(
-        (1.).into(),
-        cons(
-            (2.).into(),
-            cons((3.).into(), cons((4.).into(), (5.).into()).into()).into(),
-        )
-        .into(),
-    )
-    .into();
+    let res: SExpression = cons(1., cons(2., cons(3., cons(4., 5.)))).into();
     assert_eq!(append(x, y), res);
 }
 
@@ -227,7 +217,7 @@ fn test_among() {
 
 #[test]
 fn test_pair() {
-    assert_eq!(pair(T.into(), T.into()), cons(T.into(), T.into()).into());
+    assert_eq!(pair(T.into(), T.into()), cons(T, T).into());
 
     // these 2 tests even though intuitively make sense (and would work with a python zip)
     // are undefined behaviour in LISP
@@ -254,11 +244,7 @@ fn test_pair() {
     let input_y = list![x.clone(), list![y.clone(), z.clone()], u.clone()];
     let output = pair(input_x.clone().into(), input_y.clone().into());
 
-    let expected_output = list![
-        cons(a.into(), x.into()),
-        cons(b.into(), list![y, z].into()),
-        cons(c.into(), u.into())
-    ];
+    let expected_output = list![cons(a, x), cons(b, list![y, z]), cons(c, u)];
 
     assert_eq!(output, expected_output.into());
 }
@@ -284,16 +270,10 @@ fn test_pairlis() {
 
 #[test]
 fn test_assoc() {
+    assert_eq!(assoc_v(1.into(), list![cons(1, "one")]), Some("one".into()));
+    assert_eq!(assoc_v(2.into(), list![cons(1, "one")]), None);
     assert_eq!(
-        assoc_v(1.into(), list![cons(1.into(), "one".into())]),
-        Some("one".into())
-    );
-    assert_eq!(assoc_v(2.into(), list![cons(1.into(), "one".into())]), None);
-    assert_eq!(
-        assoc_v(
-            2.into(),
-            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())]
-        ),
+        assoc_v(2.into(), list![cons(1, "one"), cons(2, "two")]),
         Some("two".into())
     );
 
@@ -309,9 +289,9 @@ fn test_assoc() {
     let y: SExpression = "Y".into();
 
     let list = list![
-        cons(w.into(), cons(a, b).into()),
-        cons(x.clone().into(), cons(c.clone(), d.clone()).into()),
-        cons(y, cons(e, f).into())
+        cons(w, cons(a, b)),
+        cons(x.clone(), cons(c.clone(), d.clone())),
+        cons(y, cons(e, f))
     ];
 
     assert_eq!(assoc_v(x, list), Some(cons(c, d).into()));
@@ -319,34 +299,19 @@ fn test_assoc() {
 
 #[test]
 fn test_sub2() {
+    assert_eq!(sub2(list![cons(1, "one")], 1.into()), "one".into());
+    assert_eq!(sub2(list![cons(1, "one")], 2.into()), 2.into());
     assert_eq!(
-        sub2(list![cons(1.into(), "one".into())].into(), 1.into()),
-        "one".into()
-    );
-    assert_eq!(
-        sub2(list![cons(1.into(), "one".into())].into(), 2.into()),
-        2.into()
-    );
-    assert_eq!(
-        sub2(
-            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
-            1.into()
-        ),
+        sub2(list![cons(1, "one"), cons(2, "two")].into(), 1.into()),
         "one".into()
     );
 
     assert_eq!(
-        sub2(
-            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
-            2.into()
-        ),
+        sub2(list![cons(1, "one"), cons(2, "two")].into(), 2.into()),
         "two".into()
     );
     assert_eq!(
-        sub2(
-            list![cons(1.into(), "one".into()), cons(2.into(), "two".into())].into(),
-            3.into()
-        ),
+        sub2(list![cons(1, "one"), cons(2, "two")].into(), 3.into()),
         3.into()
     );
 }
@@ -355,44 +320,28 @@ fn test_sub2() {
 fn test_sublis() {
     assert_eq!(
         sublis(
-            list![
-                cons(1.into(), "one".into()),
-                cons(2.into(), "two".into()),
-                cons(3.into(), "three".into())
-            ],
+            list![cons(1, "one"), cons(2, "two"), cons(3, "three")],
             list![1].into()
         ),
         list!["one"].into()
     );
     assert_eq!(
         sublis(
-            list![
-                cons(1.into(), "one".into()),
-                cons(2.into(), "two".into()),
-                cons(3.into(), "three".into())
-            ],
+            list![cons(1, "one"), cons(2, "two"), cons(3, "three")],
             list![3, 2, 1].into()
         ),
         list!["three", "two", "one"].into()
     );
     assert_eq!(
         sublis(
-            list![
-                cons(1.into(), "one".into()),
-                cons(2.into(), "two".into()),
-                cons(3.into(), "three".into())
-            ],
+            list![cons(1, "one"), cons(2, "two"), cons(3, "three")],
             list![3, 2, 42].into()
         ),
         list!["three", "two", 42].into()
     );
     assert_eq!(
         sublis(
-            list![
-                cons(1.into(), "one".into()),
-                cons(2.into(), "two".into()),
-                cons(3.into(), "three".into())
-            ],
+            list![cons(1, "one"), cons(2, "two"), cons(3, "three")],
             list![4].into()
         ),
         list![4].into()

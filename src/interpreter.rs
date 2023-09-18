@@ -110,14 +110,11 @@ fn handle_label(e: List, a: NullableList) -> SExpression {
     );
 
     let new_association_list = match a {
-        NullableList::List(a_list) => cons(association_list.into(), a_list.into()),
+        NullableList::List(a_list) => cons(association_list, a_list),
         NullableList::NIL => association_list,
     };
 
-    dbg!(eval(
-        cons(lambda.into(), args).into(),
-        new_association_list.into(),
-    ))
+    eval(cons(expression, args).into(), new_association_list.into())
 }
 
 // TODO: good lord that's a huge function, split into smaller ones!
@@ -231,16 +228,12 @@ fn evcon(c: List, a: NullableList) -> Option<SExpression> {
 fn evlis(m: NullableList, a: NullableList) -> NullableList {
     match m {
         NullableList::List(m_list) => match cdr(m_list.clone()) {
-            SExpression::Atom(cdr_m_list) => cons(
-                eval(car(m_list), a.clone()),
-                eval(cdr_m_list.into(), a).into(),
-            )
-            .into(),
-            SExpression::List(cdr_m_list) => cons(
-                eval(car(m_list), a.clone()),
-                evlis(cdr_m_list.into(), a).into(),
-            )
-            .into(),
+            SExpression::Atom(cdr_m_list) => {
+                cons(eval(car(m_list), a.clone()), eval(cdr_m_list.into(), a)).into()
+            }
+            SExpression::List(cdr_m_list) => {
+                cons(eval(car(m_list), a.clone()), evlis(cdr_m_list.into(), a)).into()
+            }
         },
         NullableList::NIL => NIL.into(),
     }
@@ -249,34 +242,23 @@ fn evlis(m: NullableList, a: NullableList) -> NullableList {
 #[test]
 fn test_appq() {
     assert_eq!(
-        appq("A".into()),
-        cons(Symbol::QUOTE.into(), "A".into()).into()
-    );
-    assert_eq!(
-        appq(cons("A".into(), "B".into()).into()),
-        list![
-            cons(Symbol::QUOTE.into(), "A".into()),
-            cons(Symbol::QUOTE.into(), "B".into())
-        ]
-        .into()
+        appq(cons("A", "B").into()),
+        cons(cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B")).into()
     );
     assert_eq!(
         appq(list!["A", "B", "C"].into()),
         list![
-            cons(Symbol::QUOTE.into(), "A".into()),
-            cons(Symbol::QUOTE.into(), "B".into()),
-            cons(Symbol::QUOTE.into(), "C".into())
+            cons(Symbol::QUOTE, "A"),
+            cons(Symbol::QUOTE, "B"),
+            cons(Symbol::QUOTE, "C")
         ]
         .into()
     );
     assert_eq!(
         appq(list![list!["A", "B"], "C"].into()),
         list![
-            list![
-                cons(Symbol::QUOTE.into(), "A".into()),
-                cons(Symbol::QUOTE.into(), "B".into())
-            ],
-            cons(Symbol::QUOTE.into(), "C".into())
+            cons(Symbol::QUOTE, list!["A", "B"]),
+            cons(Symbol::QUOTE, "C")
         ]
         .into()
     );
@@ -292,14 +274,7 @@ mod elementary_functions_tests {
     fn test_eval_car() {
         assert_eq!(
             eval(
-                list![
-                    ElementaryFunction::CAR,
-                    list![list![
-                        cons(Symbol::QUOTE.into(), "A".into()),
-                        cons(Symbol::QUOTE.into(), "B".into())
-                    ]]
-                ]
-                .into(),
+                list![ElementaryFunction::CAR, list![Symbol::QUOTE, "A", "B"]].into(),
                 NIL.into()
             ),
             1.into()
@@ -318,40 +293,55 @@ mod elementary_functions_tests {
     #[test]
     fn test_eval_cons() {
         assert_eq!(
-            eval(list![ElementaryFunction::CONS, "A", "B"].into(), NIL.into()),
-            cons("A".into(), "B".into()).into()
+            eval(
+                cons(
+                    ElementaryFunction::CONS,
+                    cons(cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B"))
+                )
+                .into(),
+                NIL.into()
+            ),
+            cons("A", "B").into()
         );
     }
     #[test]
     fn test_eval_cons_variables() {
         assert_eq!(
             eval(
-                list![ElementaryFunction::CONS, "A", "B"].into(),
-                list![cons("A".into(), 1.into()), cons("B".into(), 2.into())].into()
+                cons(ElementaryFunction::CONS, cons("A", "B")).into(),
+                cons(cons("A", 1), cons("B", 2)).into()
             ),
-            cons(1.into(), 2.into()).into()
+            cons(1, 2).into()
         );
     }
     #[test]
     fn test_eval_eq_variables() {
         assert_eq!(
             eval(
-                list![ElementaryFunction::EQ, list!["x", "x"]].into(),
+                cons(
+                    ElementaryFunction::EQ,
+                    cons(cons(Symbol::QUOTE, "x"), cons(Symbol::QUOTE, "x"))
+                )
+                .into(),
                 NIL.into()
             ),
             T.into()
         );
         assert_eq!(
             eval(
-                list![ElementaryFunction::EQ, list!["x", "y"]].into(),
+                cons(
+                    ElementaryFunction::EQ,
+                    cons(cons(Symbol::QUOTE, "x"), cons(Symbol::QUOTE, "y"))
+                )
+                .into(),
                 NIL.into()
             ),
             NIL.into()
         );
         assert_eq!(
             eval(
-                list![ElementaryFunction::EQ, list!["x", "y"]].into(),
-                list![cons("y".into(), "x".into())].into()
+                cons(ElementaryFunction::EQ, cons("x", "y")).into(),
+                list![cons("y", "x")].into()
             ),
             T.into()
         );
@@ -359,13 +349,13 @@ mod elementary_functions_tests {
     #[test]
     fn test_eval_atom() {
         assert_eq!(
-            eval(list![ElementaryFunction::ATOM, 1].into(), NIL.into()),
+            eval(cons(ElementaryFunction::ATOM, "X").into(), NIL.into()),
             T.into()
         );
         assert_eq!(
             eval(
-                list![ElementaryFunction::ATOM, "X"].into(),
-                list![cons("X".into(), list![1, 2, 3].into())].into()
+                cons(ElementaryFunction::ATOM, "X").into(),
+                cons(cons("X", list![1, 2, 3]), NIL).into()
             ),
             NIL.into()
         );

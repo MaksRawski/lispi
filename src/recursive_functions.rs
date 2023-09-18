@@ -54,32 +54,25 @@ pub fn null(x: SExpression) -> bool {
 
 #[test]
 fn test_ff() {
-    assert_eq!(
-        ff(cons(cons("A".into(), "B".into()).into(), "C".into()).into()),
-        "A".into()
-    );
+    assert_eq!(ff(cons(cons("A", "B"), "C").into()), "A".into());
 }
 
 #[test]
 fn test_subst() {
     assert_eq!(
-        subst("A".into(), 1.into(), cons(1.into(), 2.into()).into()),
-        cons("A".into(), 2.into()).into()
+        subst("A".into(), 1.into(), cons(1, 2).into()),
+        cons("A", 2).into()
     );
     assert_eq!(
-        subst(
-            "A".into(),
-            1.into(),
-            cons(cons(1.into(), 2.into()).into(), 1.into()).into()
-        ),
-        cons(cons("A".into(), 2.into()).into(), "A".into()).into()
+        subst("A".into(), 1.into(), cons(cons(1, 2), 1).into()),
+        cons(cons("A", 2), "A").into()
     );
 }
 
 #[test]
 fn test_equal() {
-    let x: SExpression = cons(cons(T.into(), T.into()).into(), NIL.into()).into();
-    let y: SExpression = cons(cons(T.into(), NIL.into()).into(), NIL.into()).into();
+    let x: SExpression = cons(cons(T, T), NIL).into();
+    let y: SExpression = cons(cons(T, NIL), NIL).into();
 
     assert!(equal(x.clone(), x.clone()));
     assert!(!equal(x, y));
@@ -89,5 +82,5 @@ fn test_equal() {
 fn test_null() {
     assert!(null(NIL.into()));
     assert!(!null(T.into()));
-    assert!(!null(cons(NIL.into(), NIL.into()).into()));
+    assert!(!null(cons(NIL, NIL).into()));
 }
