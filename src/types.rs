@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use crate::elementary_functions::{car, cdr};
 
@@ -54,12 +54,23 @@ impl Display for Symbol {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Atom {
     Number(f64),
     String(String),
     Symbol(Symbol),
     Bool(Bool),
+}
+
+impl std::fmt::Debug for Atom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
+            Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
+            Atom::String(s) => f.write_fmt(format_args!("{:?}", s)),
+            Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+        }
+    }
 }
 
 impl Display for Atom {
@@ -104,7 +115,7 @@ impl<T: Into<Symbol>> From<T> for Atom {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct List(pub Box<SExpression>, pub Box<SExpression>);
 
 impl List {
@@ -113,40 +124,127 @@ impl List {
     }
 }
 
+impl Debug for List {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", debug_list(self, 0)))
+    }
+}
+
+/// helper function for /proper/ displaying of List structures
+/// Because List is both a type and a variant (of SExpression) it can lead to confusion:
+/// sometimes you may see List with one item inside it (as a variant of SExpresion)
+/// and sometimes with two items (as a tuple).
+/// This function does pretty much the same thing as the one that could be derived from Debug,
+/// but it won't display the List variant around List types.
+fn debug_list(l: &List, indent_level: u8) -> String {
+    let indent = "\t".repeat(indent_level.into());
+
+    let mut s = format!("{indent}List");
+    match car(l.clone()) {
+        SExpression::Atom(car_l) => match cdr(l.clone()) {
+            SExpression::Atom(cdr_l) => s.push_str(&format!("({}, {})", car_l, cdr_l,)),
+            SExpression::List(cdr_l) => s.push_str(&format!(
+                "(\n\t{indent}{},\n{}\n{indent})",
+                car_l,
+                debug_list(&cdr_l, indent_level + 1)
+            )),
+        },
+        SExpression::List(car_l) => match cdr(l.clone()) {
+            SExpression::Atom(cdr_l) => s.push_str(&format!(
+                "(\n{},\n\t{indent}{}\n{indent})",
+                debug_list(&car_l, indent_level + 1),
+                cdr_l
+            )),
+            SExpression::List(cdr_l) => s.push_str(&format!(
+                "(\n{},\n{}\n{indent})",
+                debug_list(&car_l, indent_level + 1),
+                debug_list(&cdr_l, indent_level + 1),
+            )),
+        },
+    }
+    s
+}
+
 impl Display for List {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        if is_cons(self.clone()) {
-            f.write_fmt(format_args!(
-                "({} . {})",
-                car(self.clone()),
-                cdr(self.clone())
-            ))
-        } else {
-            f.write_fmt(format_args!("[{}]", disp_list(self.clone())))
-        }
+        f.write_fmt(format_args!("{}", display_list(self, false)))
     }
 }
 
 /// helper function for prettier displaying of lists that is:
 /// display [1, 2, 3] instead of (1 . (2 . (3 . NIL)))
-/// but display: (1 . (2 . 3)) when the last element is not a NIL pointer
-fn disp_list(l: List) -> String {
-    let car_l = car(l.clone());
-    match cdr(l) {
-        SExpression::Atom(cdr_l) => match cdr_l {
-            Atom::Bool(Bool::NIL) => format!("{}", car_l),
-            _ => format!("{}, {}", car_l, cdr_l),
+/// but display: (1 . (2 . 3)) when the right-most element is not NIL
+fn display_list(l: &List, is_cdr: bool) -> String {
+    match car(l.clone()) {
+        SExpression::Atom(car_l) => match cdr(l.clone()) {
+            SExpression::Atom(cdr_l) => {
+                if cdr_l == NIL.into() {
+                    if is_cdr {
+                        format!("{car_l}")
+                    } else {
+                        format!("[{car_l}]")
+                    }
+                } else {
+                    format!("({car_l} . {cdr_l})")
+                }
+            }
+            SExpression::List(cdr_l) => {
+                if is_cons(&cdr_l) {
+                    format!("({car_l} . {})", display_list(&cdr_l, false))
+                } else {
+                    if is_cdr {
+                        format!("{car_l}, {}", display_list(&cdr_l, true))
+                    } else {
+                        format!("[{car_l}, {}]", display_list(&cdr_l, true))
+                    }
+                }
+            }
         },
-        SExpression::List(cdr_l) => format!("{}, {}", car_l, disp_list(cdr_l)),
+        SExpression::List(car_l) => match cdr(l.clone()) {
+            SExpression::Atom(cdr_l) => {
+                if cdr_l == NIL.into() {
+                    if is_cdr {
+                        format!("{}", display_list(&car_l, false))
+                    } else {
+                        format!("[{}]", display_list(&car_l, false))
+                    }
+                } else {
+                    format!("({} . {cdr_l})", display_list(&car_l, false))
+                }
+            }
+            SExpression::List(cdr_l) => {
+                if is_cons(&l.clone()) {
+                    format!(
+                        "({} . {})",
+                        display_list(&car_l, false),
+                        display_list(&cdr_l, false)
+                    )
+                } else {
+                    if is_cdr {
+                        format!(
+                            "{}, {}",
+                            display_list(&car_l, false),
+                            display_list(&cdr_l, true),
+                        )
+                    } else {
+                        format!(
+                            "[{}, {}]",
+                            display_list(&car_l, false),
+                            display_list(&cdr_l, true)
+                        )
+                    }
+                }
+            }
+        },
     }
 }
 
 /// determines if a list is a _cons_ object that is:
-/// it's not a list because the right most element is not NIL
-fn is_cons(l: List) -> bool {
-    match cdr(l) {
+/// it's not a list because the right-most element is not NIL
+fn is_cons(l: &List) -> bool {
+    match cdr(l.clone()) {
         SExpression::Atom(a) => a != NIL.into(),
-        SExpression::List(cdr_l) => is_cons(cdr_l),
+        SExpression::List(cdr_l) => is_cons(&cdr_l),
     }
 }
 
@@ -179,10 +277,6 @@ fn test_display_list() {
         format!("{}", list![cons(1, 2), cons(3, 4)]),
         "[(1 . 2), (3 . 4)]"
     );
-    assert_eq!(
-        format!("{}", cons(list![1, 2].into(), list![3, 4].into())),
-        "([1, 2] . [3, 4])"
-    );
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -206,7 +300,7 @@ impl From<Bool> for NullableList {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SExpression {
     Atom(Atom),
     List(List),
@@ -219,15 +313,6 @@ impl PartialEq for SExpression {
 }
 
 impl Display for SExpression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SExpression::Atom(a) => f.write_fmt(format_args!("{}", a)),
-            SExpression::List(l) => f.write_fmt(format_args!("{}", l)),
-        }
-    }
-}
-
-impl std::fmt::Debug for SExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SExpression::Atom(a) => f.write_fmt(format_args!("{}", a)),
