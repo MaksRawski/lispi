@@ -47,13 +47,28 @@ fn test_eq() {
 
 #[test]
 fn test_car() {
+    assert_eq!(car(List::new("A".into(), NIL.into())), "A".into());
     assert_eq!(car(List::new("A".into(), "B".into())), "A".into());
+    assert_eq!(
+        car(List::new(
+            List::new("A".into(), "B".into()).into(),
+            "C".into()
+        )),
+        List::new("A".into(), "B".into()).into()
+    );
 }
 
 #[test]
 fn test_cdr() {
     assert_eq!(cdr(List::new("A".into(), NIL.into())), NIL.into());
     assert_eq!(cdr(List::new("A".into(), "B".into())), "B".into());
+    assert_eq!(
+        cdr(List::new(
+            "A".into(),
+            List::new("B".into(), "C".into()).into()
+        )),
+        List::new("B".into(), "C".into()).into()
+    );
 }
 
 #[test]
