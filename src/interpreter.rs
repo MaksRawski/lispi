@@ -1,26 +1,27 @@
 use crate::{
     elementary_functions::{atom, car, cdr, cons},
     list_functions::{append, assoc_v, pair},
-    list_macros::{compose_car_cdr, list},
-    recursive_functions::equal,
+    list_macros::compose_car_cdr,
+    recursive_functions::{equal, null},
     types::{Atom, Bool, ElementaryFunction, List, NullableList, SExpression, Symbol, NIL},
 };
 
 /// The universal lisp function AKA the interpreter:
-/// applies function f to a list of arguments x
+/// applies a function f to a list of arguments x
 pub fn apply(f: SExpression, x: List) -> SExpression {
-    // TODO: look at appendix B for how to allow usage of other "compiled" functions?
-    eval(cons(f, appq(x.into()).into()).into(), NIL.into())
+    // TODO: look at appendix B of programmer's manual for how to allow usage
+    // of other "compiled" functions?
+    eval(cons(f, appq(x.into())).into(), NIL.into())
 }
 
 /// applies QUOTE to each symbol in an expression
-/// this is different from what was mentioned in the original paper
-/// look at
 fn appq(m: SExpression) -> SExpression {
+    if null(m.clone()) {
+        return NIL.into();
+    }
     match m {
-        SExpression::List(l) => cons(appq(car(l.clone())).into(), appq(cdr(l)).into()).into(),
-        SExpression::Atom(Atom::Bool(Bool::NIL)) => NIL.into(),
-        SExpression::Atom(a) => cons(Symbol::QUOTE.into(), a.into()).into(),
+        SExpression::List(l) => cons(cons(Symbol::QUOTE, car(l.clone())), appq(cdr(l))).into(),
+        SExpression::Atom(a) => cons(Symbol::QUOTE, a).into(),
     }
 }
 
@@ -30,21 +31,21 @@ fn handle_lambda(e: List, a: NullableList) -> SExpression {
     let binds: List = match compose_car_cdr("cadar", e.clone()) {
         Some(SExpression::List(l)) => l,
         _ => panic!(
-            "Invalid use of LAMBDA: {}, second argument should be a list of symbols to bind.",
+            "Invalid use of LAMBDA: {}, second element should be a list of symbols to bind.",
             e
         ),
     };
 
     let expression = compose_car_cdr("cddar", e.clone()).unwrap_or_else(|| {
         panic!(
-            "Invalid use of LAMBDA: {}, third argument should be an S-expression.",
+            "Invalid use of LAMBDA: {}, third element should be an S-expression.",
             e
         )
     });
 
     // evaluate the args before putting them into the expression
     let args: List = match cdr(e.clone()) {
-        SExpression::Atom(arg) => cons(eval(arg.into(), a.clone()), NIL.into()),
+        SExpression::Atom(arg) => cons(eval(arg.into(), a.clone()), NIL),
         SExpression::List(args) => match evlis(args.into(), a.clone()) {
             NullableList::List(evaluated_args) => evaluated_args,
             NullableList::NIL => panic!(
@@ -75,39 +76,25 @@ fn handle_lambda(e: List, a: NullableList) -> SExpression {
 
 /// utility function for the monstrocity that is `eval`
 fn handle_label(e: List, a: NullableList) -> SExpression {
-    // the entire e is of the form: ((LABEL, function_name, lambda), args)
+    // the entire e is of the form: ((LABEL, function_name, expression), args)
 
     let function_name: String = match compose_car_cdr("cadar", e.clone()) {
         Some(SExpression::Atom(Atom::Symbol(Symbol::Other(s))))
         | Some(SExpression::Atom(Atom::String(s))) => s,
         _ => panic!(
-            "Invalid use of LABEL: {}, second argument should be a function name (string).",
+            "Invalid use of LABEL: {}, second element should be a function name (string).",
             e,
         ),
     };
 
-    // 3rd argument should be a lambda which itself has a LAMBDA symbol as the first argument
-    let lambda = match compose_car_cdr("cddar", e.clone()) {
-        Some(SExpression::List(l)) => match car(l.clone()) {
-            SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => l,
-            _ => panic!(
-                "Invalid use of LABEL: {}, third argument should be a LAMBDA S-expression.",
-                e
-            ),
-        },
-        _ => panic!(
-            "Invalid use of LABEL: {}, third argument should be a LAMBDA S-expression.",
-            e
-        ),
+    let expression = match compose_car_cdr("cddar", e.clone()) {
+        Some(SExpression::Atom(a)) => todo!("Why do we have an atom? {}", a),
+        Some(expr) => expr,
+        None => todo!(),
     };
-    let args = cdr(e);
+    let args = cdr(e.clone());
 
-    // TODO: TEST THIS: paper claims you should associate function name with
-    // (LABEL, function_name, lambda) itself, which kinda feels too recursive?
-    let association_list = cons(
-        function_name.clone().into(),
-        list![Symbol::LABEL, function_name, lambda.clone()].into(),
-    );
+    let association_list = cons(function_name.clone(), car(e));
 
     let new_association_list = match a {
         NullableList::List(a_list) => cons(association_list, a_list),
@@ -117,7 +104,6 @@ fn handle_label(e: List, a: NullableList) -> SExpression {
     eval(cons(expression, args).into(), new_association_list.into())
 }
 
-// TODO: good lord that's a huge function, split into smaller ones!
 /// evaluates an expression using association list `a`
 fn eval(e: SExpression, a: NullableList) -> SExpression {
     match e {
@@ -130,7 +116,7 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
                 Atom::Symbol(Symbol::QUOTE) => cdr(e_list),
                 Atom::Symbol(Symbol::COND) => match cdr(e_list.clone()){
                     SExpression::List(cdr_e_list) => evcon(cdr_e_list, a).unwrap_or(NIL.into()),
-                    SExpression::Atom(_) => panic!("Invalid use of COND: {}, argument should be an association list between predicates and S-expressions.", e_list),
+                    SExpression::Atom(argument) => panic!("Invalid use of COND: {}, element should be an association list between predicates and S-expressions, but was: {}.", e_list, argument),
                 }
                 Atom::Symbol(Symbol::ElementaryFunction(f)) => match f {
                     ElementaryFunction::ATOM => atom(eval(cdr(e_list), a)).into(),
@@ -144,22 +130,22 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
                     },
                     ElementaryFunction::CAR => match eval(cdr(e_list.clone()), a) {
                         SExpression::List(list) => car(list),
-                        SExpression::Atom(_argument) => panic!(
-                            "Invalid use of CAR: {}, argument should be a list.",
-                            e_list
+                        SExpression::Atom(argument) => panic!(
+                            "Invalid use of CAR: {}, argument should be a list, but was: {}.",
+                            e_list, argument
                         ),
                     },
-                    ElementaryFunction::CDR => match eval(cdr(e_list.clone()), a) {
-                        SExpression::List(list) => cdr(list),
-                        SExpression::Atom(_argument) => panic!(
-                            "Invalid use of CDR: {}, argument should be a list.",
-                            e_list
+                    ElementaryFunction::CDR => match eval(cdr(dbg!(e_list.clone())), a) {
+                        SExpression::List(list) => cdr(dbg!(list)),
+                        SExpression::Atom(argument) => panic!(
+                            "Invalid use of CDR: {}, argument should be a list but was: {}.",
+                            e_list, argument
                         ),
                     },
                     ElementaryFunction::CONS => match cdr(e_list.clone()) {
-                        SExpression::List(arguments) => cons(eval(car(arguments.clone()), a.clone()), dbg!(eval(dbg!(cdr(arguments)), a))).into(),
+                        SExpression::List(arguments) => cons(eval(car(arguments.clone()), a.clone()), eval(cdr(arguments), a)).into(),
                         SExpression::Atom(_argument) => {
-                            panic!("Invalid use of EQ: {}, two arguments are required.", e_list)
+                            panic!("Invalid use of CONS: {}, two arguments are required.", e_list)
                         }
                     },
                 },
@@ -179,12 +165,12 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
                             .into(),
                             a,
                         ),
-                        SExpression::List(arguments) => eval(
+                        SExpression::List(arguments) =>  eval(
                             cons(
-                                assoc_v(s.clone().into(), a_list).unwrap_or_else(|| {
+                                assoc_v(s.clone().into(), dbg!(a_list)).unwrap_or_else(|| {
                                     panic!("Invalid function: {}, symbol unbound.", s)
                                 }),
-                                evlis(arguments.into(), a.clone().into()).into()
+                                eval(arguments.into(), a.clone().into()) // NOTE: paper claims that evlis should be used here
                             )
                             .into(),
                             a,
@@ -194,7 +180,7 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
                 },
             },
             SExpression::List(list_func) => match car(list_func.clone()){
-                SExpression::Atom(Atom::Symbol(Symbol::LABEL)) => handle_label(e_list, a),
+                SExpression::Atom(Atom::Symbol(Symbol::LABEL)) =>  handle_label(e_list, a),
                 SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => handle_lambda(e_list, a),
                 SExpression::Atom(Atom::Symbol(Symbol::QUOTE)) => cdr(list_func),
                 SExpression::Atom(Atom::Number(_)) => panic!("Tried to use a number as a function: {}", e_list),
@@ -241,6 +227,8 @@ fn evlis(m: NullableList, a: NullableList) -> NullableList {
 
 #[test]
 fn test_appq() {
+    use crate::list_macros::list;
+    assert_eq!(appq("A".into()), cons(Symbol::QUOTE, "A").into());
     assert_eq!(
         appq(cons("A", "B").into()),
         cons(cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B")).into()
@@ -266,6 +254,7 @@ fn test_appq() {
 
 #[cfg(test)]
 mod elementary_functions_tests {
+    use crate::list_macros::list;
     use crate::types::T;
 
     use super::*;
@@ -277,14 +266,14 @@ mod elementary_functions_tests {
                 list![ElementaryFunction::CAR, list![Symbol::QUOTE, "A", "B"]].into(),
                 NIL.into()
             ),
-            1.into()
+            "A".into()
         )
     }
     #[test]
     fn test_eval_cdr() {
         assert_eq!(
             eval(
-                list![ElementaryFunction::CDR, list![list![Symbol::QUOTE, "A"], 2]].into(),
+                cons(ElementaryFunction::CDR, cons(Symbol::QUOTE, cons("A", "B"))).into(),
                 NIL.into()
             ),
             "B".into()
@@ -364,112 +353,108 @@ mod elementary_functions_tests {
 
 #[cfg(test)]
 mod handle_lambda_tests {
+    // LAMBDA expression is of the form: ((LAMBDA, binds, expression), arg0, arg1, arg2, ...)
     use super::*;
+    use crate::list_macros::list;
 
     #[test]
     fn test_id_lambda() {
-        let lambda_expr = list![Symbol::LAMBDA, list!["x"], "x"];
-        let args = list!["A"];
+        let lambda_expr = cons(Symbol::LAMBDA, cons(list!["x"], "x"));
+        let args = list![cons(Symbol::QUOTE, "A")];
         assert_eq!(
-            handle_lambda(list![lambda_expr, args.clone()], NIL.into()),
+            handle_lambda(list![lambda_expr, args], NIL.into()),
             "A".into()
         );
     }
 
     #[test]
     fn test_binds_lambda() {
+        let lambda = cons(Symbol::LAMBDA, cons(list!["x", "y"], "x"));
+        let args = list![cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B")];
+
         assert_eq!(
-            handle_lambda(
-                list![list![Symbol::LAMBDA, list!["x", "y"], "x"], list!["A", "B"]],
-                NIL.into()
-            ),
+            handle_lambda(cons(lambda, args.clone()), NIL.into()),
             "A".into()
         );
+
+        let lambda = cons(Symbol::LAMBDA, cons(list!["x", "y"], "y"));
+        assert_eq!(handle_lambda(cons(lambda, args), NIL.into()), "B".into());
+    }
+    #[test]
+    fn test_cond_lambda() {
+        let binds = list!["x", "y"];
+        let expression = cons(
+            Symbol::COND,
+            list![
+                cons(cons(ElementaryFunction::EQ, cons("x", "y")), "x"),
+                cons(cons(ElementaryFunction::ATOM, "x"), "y"),
+                cons(T, cons(ElementaryFunction::CAR, "x"))
+            ],
+        );
+        let lambda = cons(Symbol::LAMBDA, cons(binds.clone(), expression.clone()));
+
+        let args = list![cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B")];
         assert_eq!(
-            handle_lambda(
-                list![list![Symbol::LAMBDA, list!["x", "y"], "y"], list!["A", "B"]],
-                NIL.into()
-            ),
+            handle_lambda(cons(lambda.clone(), args), NIL.into()),
             "B".into()
         );
-    }
 
-    #[test]
-    fn test_ycombinator_ff() {
-        // \f.(\x.\f(x x)) (\x.\f(x x))
-        let y_combinator = list![
-            Symbol::LAMBDA,
-            list!["f"],
-            list![
-                list![Symbol::LAMBDA, list!["x"], list!["f", list!["x", "x"]]],
-                list![Symbol::LAMBDA, list!["x"], list!["f", list!["x", "x"]]]
-            ]
-        ];
-
-        let ff = list![
-            Symbol::LAMBDA,
-            list!["X"],
-            list![
-                Symbol::COND,
-                list![list![ElementaryFunction::ATOM, "X"], "X"],
-                list![
-                    list![Symbol::QUOTE, T],
-                    list!["FF", list![ElementaryFunction::CAR, "X"]]
-                ]
-            ]
-        ];
-        let argument = appq(list![list!["A", "B"], "C"].into());
-
-        dbg!(eval(
-            cons(ff.clone().into(), argument.clone().into()).into(),
-            NIL.into()
-        ));
-        // ^ this should've returned "FF is unbound" message
-
+        let args = list![cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "A")];
         assert_eq!(
-            handle_lambda(
-                list![y_combinator, cons(ff.into(), argument.into())].into(),
-                NIL.into()
-            ),
+            handle_lambda(cons(lambda.clone(), args), NIL.into()),
             "A".into()
         );
+
+        let args = list![
+            cons(
+                ElementaryFunction::CONS,
+                cons(cons(Symbol::QUOTE, "A"), cons(Symbol::QUOTE, "B"))
+            ),
+            cons(Symbol::QUOTE, "C")
+        ];
+        assert_eq!(handle_lambda(cons(lambda, args), NIL.into()), "A".into());
     }
 }
 
 #[cfg(test)]
 mod handle_label_tests {
+    // LABEL expressions are of the form: ((LABEL, function_name, expression), arg0, arg1, arg2, ...)
     use super::*;
-
+    use crate::list_macros::list;
     #[test]
     fn test_ff() {
-        let ff = list![
-            Symbol::LABEL,
-            "FF",
-            list![
-                Symbol::LAMBDA,
+        let lambda = cons(
+            Symbol::LAMBDA,
+            cons(
                 list!["X"],
                 list![
                     Symbol::COND,
-                    list![list![ElementaryFunction::ATOM, "X"], "X"],
-                    list![
-                        list![Symbol::QUOTE, T],
-                        list!["FF", list![ElementaryFunction::CAR, "X"]]
-                    ]
-                ]
-            ]
-        ];
-
-        let args = list![
-            list![
-                cons(Symbol::QUOTE.into(), "A".into()),
-                cons(Symbol::QUOTE.into(), "B".into())
-            ],
-            cons(Symbol::QUOTE.into(), "C".into())
-        ];
-
-        assert_eq!(
-            handle_label(list![ff.clone(), args], NIL.into()),
-            "A".into()
+                    cons(cons(ElementaryFunction::ATOM, "X"), "X"),
+                    cons(T, cons("FF", cons(ElementaryFunction::CAR, "X")))
+                ],
+            ),
         );
+        let ff = cons(Symbol::LABEL, cons("FF", lambda));
+
+        let arg = cons(Symbol::QUOTE, "A");
+        assert_eq!(handle_label(list![ff.clone(), arg], NIL.into()), "A".into());
+
+        let arg = list![
+            ElementaryFunction::CONS,
+            cons(Symbol::QUOTE, "A"),
+            cons(Symbol::QUOTE, "B")
+        ];
+        assert_eq!(handle_label(list![ff.clone(), arg], NIL.into()), "A".into());
+
+        let arg = list![
+            ElementaryFunction::CONS,
+            list![
+                ElementaryFunction::CONS,
+                cons(Symbol::QUOTE, "A"),
+                cons(Symbol::QUOTE, "B")
+            ],
+            cons(Symbol::QUOTE, "C")
+        ];
+        assert_eq!(handle_label(list![ff.clone(), arg], NIL.into()), "A".into());
     }
 }
