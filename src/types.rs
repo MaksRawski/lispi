@@ -65,9 +65,9 @@ pub enum Atom {
 impl std::fmt::Debug for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
+            Atom::Symbol(s) => f.write_fmt(format_args!("Symbol({})", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(s) => f.write_fmt(format_args!("{:?}", s)),
+            Atom::String(s) => f.write_fmt(format_args!("String({:?})", s)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
         }
     }
