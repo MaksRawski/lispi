@@ -104,7 +104,7 @@ fn parse_sexp(s: &str) -> Option<SExpression> {
 }
 
 fn vec_to_lisp_list(sexps: Vec<SExpression>) -> NullableList {
-    match sexps.iter().count() {
+    match sexps.len() {
         0 => NIL.into(),
         1 => cons(sexps.get(0).unwrap().clone(), NIL).into(),
         _ => cons(
