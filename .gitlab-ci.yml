@@ -1,6 +1,8 @@
+# taken from: https://gitlab.com/blitz2/rust-code-coverage-example/-/blob/373eb89d38619234e3a7e0ec6b53fd3348213916/.gitlab-ci.yml
+# updated to use coverage_report property
+
 stages:
   - tests
-
 
 variables:
   # Move the Cargo temporary files into the current directory so they
