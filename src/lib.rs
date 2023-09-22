@@ -5,5 +5,6 @@ pub mod elementary_functions;
 pub mod interpreter;
 pub mod list_functions;
 pub mod list_macros;
+pub mod parser;
 pub mod recursive_functions;
 pub mod types;
