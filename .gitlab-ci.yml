@@ -8,25 +8,23 @@ variables:
   # needed.
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
 
-.in_rust_container_template: &in_rust_container
+tests:coverage:
   image: rust:1.70
   cache:
     # Don't cache across different pipelines.
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - $CARGO_HOME
-
-tests:coverage:
-  <<: *in_rust_container
   stage: tests
   interruptible: true
   before_script:
     - cargo install cargo-tarpaulin
   script:
-    - cargo tarpaulin --out Xml --root . --manifest-path Cargo.toml
+    - cargo tarpaulin --out xml
   coverage: '/\d+.\d+\% coverage,.*lines covered/'
   artifacts:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: coverage.xml
+        path: cobertura.xml
+
