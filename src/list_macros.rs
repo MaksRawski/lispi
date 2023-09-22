@@ -51,14 +51,15 @@ fn test_list_macro() {
 /// Compose car and cdr functions and apply them to a list.
 /// Example usage:
 /// ```
-/// use lisp_interpreter::list_macros::{compose_car_cdr, list};
+/// use lisp_interpreter::list_macros::compose_car_cdr;
+/// use lisp_interpreter::elementary_functions::cons;
 ///
-/// let list = list![list![1,2], list![3,4]];
+/// let c = cons(cons(1,2), cons(3,4));
 ///
-/// assert_eq!(compose_car_cdr("caar", list.clone()), Some(1.into()));
-/// assert_eq!(compose_car_cdr("cdar", list.clone()), Some(2.into()));
-/// assert_eq!(compose_car_cdr("cadr", list.clone()), Some(3.into()));
-/// assert_eq!(compose_car_cdr("cddr", list.clone()), Some(4.into()));
+/// assert_eq!(compose_car_cdr("caar", c.clone()), Some(1.into()));
+/// assert_eq!(compose_car_cdr("cdar", c.clone()), Some(2.into()));
+/// assert_eq!(compose_car_cdr("cadr", c.clone()), Some(3.into()));
+/// assert_eq!(compose_car_cdr("cddr", c.clone()), Some(4.into()));
 /// ```
 pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
     if car_cdr_composition == "car" {
