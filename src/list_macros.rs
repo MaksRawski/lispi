@@ -51,7 +51,7 @@ fn test_list_macro() {
 /// Compose car and cdr functions and apply them to a list.
 /// Example usage:
 /// ```
-/// use lisp_parser::list_macros::{compose_car_cdr, list};
+/// use lisp_interpreter::list_macros::{compose_car_cdr, list};
 ///
 /// let list = list![list![1,2], list![3,4]];
 ///

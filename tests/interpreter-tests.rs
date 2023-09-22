@@ -2,7 +2,7 @@
 // but these ones make sure that the function `apply` applies them correctly.
 #[cfg(test)]
 mod apply_elementary_functions_tests {
-    use lisp_parser::{
+    use lisp_interpreter::{
         elementary_functions::cons,
         interpreter::apply,
         list,
@@ -51,7 +51,7 @@ mod apply_elementary_functions_tests {
     }
 }
 mod test_programs {
-    use lisp_parser::{elementary_functions::cons, interpreter::apply, list, types::Symbol};
+    use lisp_interpreter::{elementary_functions::cons, interpreter::apply, list, types::Symbol};
     #[test]
     fn test_ff() {
         let ff = cons(

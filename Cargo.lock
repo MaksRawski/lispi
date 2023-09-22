@@ -3,5 +3,6 @@
 version = 3
 
 [[package]]
-name = "lisp-parser"
+[[package]]
+name = "lisp-interpreter"
 version = "0.1.0"
