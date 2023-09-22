@@ -91,7 +91,7 @@ fn parse_sexp(s: &str) -> Option<SExpression> {
                 }
             }
 
-            Some(iter_to_lisp_list(sexps).into())
+            Some(vec_to_lisp_list(sexps).into())
         }
         None => {
             error!(
@@ -103,13 +103,13 @@ fn parse_sexp(s: &str) -> Option<SExpression> {
     }
 }
 
-fn iter_to_lisp_list(sexps: Vec<SExpression>) -> NullableList {
+fn vec_to_lisp_list(sexps: Vec<SExpression>) -> NullableList {
     match sexps.iter().count() {
         0 => NIL.into(),
         1 => cons(sexps.get(0).unwrap().clone(), NIL).into(),
         _ => cons(
             sexps.get(0).unwrap().clone(),
-            iter_to_lisp_list(sexps.iter().skip(1).cloned().collect()),
+            vec_to_lisp_list(sexps.iter().skip(1).cloned().collect()),
         )
         .into(),
     }
