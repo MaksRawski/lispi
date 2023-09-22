@@ -1,0 +1,32 @@
+# taken from: https://gitlab.com/blitz2/rust-code-coverage-example/-/blob/373eb89d38619234e3a7e0ec6b53fd3348213916/.gitlab-ci.yml
+# updated to use coverage_report property
+
+stages:
+  - tests
+
+variables:
+  # Move the Cargo temporary files into the current directory so they
+  # can be cached. Cargo is smart enough to rebuild things when
+  # needed.
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
+tests:coverage:
+  image: rust:1.70
+  cache:
+    # Don't cache across different pipelines.
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - $CARGO_HOME
+  stage: tests
+  interruptible: true
+  before_script:
+    - cargo install cargo-tarpaulin
+  script:
+    - cargo tarpaulin --out xml
+  coverage: '/\d+.\d+\% coverage,.*lines covered/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
+
