@@ -1,0 +1,30 @@
+stages:
+  - tests
+
+
+variables:
+  # Move the Cargo temporary files into the current directory so they
+  # can be cached. Cargo is smart enough to rebuild things when
+  # needed.
+  CARGO_HOME: $CI_PROJECT_DIR/.cargo
+
+.in_rust_container_template: &in_rust_container
+  image: rust:1.70
+  cache:
+    # Don't cache across different pipelines.
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - $CARGO_HOME
+
+tests:coverage:
+  <<: *in_rust_container
+  stage: tests
+  interruptible: true
+  before_script:
+    - cargo install cargo-tarpaulin
+  script:
+    - cargo tarpaulin --out Xml --root . --manifest-path Cargo.toml
+  coverage: '/\d+.\d+\% coverage,.*lines covered/'
+  artifacts:
+    reports:
+      cobertura: cobertura.xml
