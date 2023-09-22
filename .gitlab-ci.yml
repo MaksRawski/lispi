@@ -27,4 +27,6 @@ tests:coverage:
   coverage: '/\d+.\d+\% coverage,.*lines covered/'
   artifacts:
     reports:
-      cobertura: cobertura.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
