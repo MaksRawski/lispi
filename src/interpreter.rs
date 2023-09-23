@@ -94,7 +94,7 @@ fn handle_label(e: List, a: NullableList) -> SExpression {
     };
     let args = cdr(e.clone());
 
-    let association_list = cons(function_name.clone(), car(e));
+    let association_list = cons(function_name, car(e));
 
     let new_association_list = match a {
         NullableList::List(a_list) => cons(association_list, a_list),
@@ -165,12 +165,12 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
                             .into(),
                             a,
                         ),
-                        SExpression::List(arguments) =>  eval(
+                        SExpression::List(arguments) => eval(
                             cons(
                                 assoc_v(s.clone().into(), dbg!(a_list)).unwrap_or_else(|| {
                                     panic!("Invalid function: {}, symbol unbound.", s)
                                 }),
-                                eval(arguments.into(), a.clone().into()) // NOTE: paper claims that evlis should be used here
+                                eval(arguments.into(), a.clone()) // NOTE: paper claims that evlis should be used here
                             )
                             .into(),
                             a,
@@ -195,7 +195,7 @@ fn eval(e: SExpression, a: NullableList) -> SExpression {
 /// the form following the first true predicate
 fn evcon(c: List, a: NullableList) -> Option<SExpression> {
     match car(c.clone()) {
-        SExpression::Atom(car_c) => match eval(car_c.into(), a.clone()) {
+        SExpression::Atom(car_c) => match eval(car_c.into(), a) {
             SExpression::Atom(Atom::Bool(Bool::T)) => Some(cdr(c)),
             _ => None,
         },

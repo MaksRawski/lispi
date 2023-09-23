@@ -4,8 +4,8 @@ use crate::types::*;
 /// the first atomic symbol of an S-Expression
 pub fn ff(expr: SExpression) -> Atom {
     match expr {
-        SExpression::Atom(a) => return a,
-        SExpression::List(l) => return ff(car(l)),
+        SExpression::Atom(a) => a,
+        SExpression::List(l) => ff(car(l)),
     }
 }
 
@@ -14,16 +14,16 @@ pub fn subst(x: SExpression, y: Atom, z: SExpression) -> SExpression {
     match z.clone() {
         SExpression::Atom(a) => {
             if a == y {
-                return x;
+                x
             } else {
-                return z;
+                z
             }
         }
         SExpression::List(l) => {
-            return SExpression::List(cons(
+            SExpression::List(cons(
                 subst(x.clone(), y.clone(), car(l.clone())),
                 subst(x, y, cdr(l)),
-            ));
+            ))
         }
     }
 }

@@ -1,10 +1,7 @@
 use crate::types::*;
 
 pub fn atom(x: SExpression) -> bool {
-    match x {
-        SExpression::Atom(_) => true,
-        _ => false,
-    }
+    matches!(x, SExpression::Atom(_))
 }
 
 pub fn eq(x: Atom, y: Atom) -> bool {

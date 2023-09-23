@@ -74,7 +74,7 @@ pub fn pairlis(x: SExpression, y: SExpression, a: List) -> List {
     }
     match x {
         SExpression::Atom(atom_x) => match y {
-            SExpression::Atom(atom_y) => cons(cons(atom_x, atom_y), a).into(),
+            SExpression::Atom(atom_y) => cons(cons(atom_x, atom_y), a),
             SExpression::List(list_y) => {
                 unimplemented!(
                     "Tried to pair an Atom with a List:\n{:?}\n{:?}",
@@ -94,8 +94,7 @@ pub fn pairlis(x: SExpression, y: SExpression, a: List) -> List {
             SExpression::List(list_y) => cons(
                 list![car(list_x.clone()), car(list_y.clone())],
                 pairlis(cdr(list_x), cdr(list_y), a),
-            )
-            .into(),
+            ),
         },
     }
 }
@@ -127,14 +126,12 @@ pub fn assoc_v(x: Atom, y: List) -> Option<SExpression> {
             if eq(caar_y, x.clone()) {
                 // the paper mentions cadar here but what they probably meant is cdar
                 // as cadar doesn't even make sense in their example
-                return compose_car_cdr("cdar", y.clone())
-                    .or_else(|| panic!("No value is associated with {x} in {y}."));
+                compose_car_cdr("cdar", y.clone())
+                    .or_else(|| panic!("No value is associated with {x} in {y}."))
+            } else if let SExpression::List(cdr_y_list) = cdr(y) {
+                assoc_v(x, cdr_y_list)
             } else {
-                if let SExpression::List(cdr_y_list) = cdr(y.clone()) {
-                    return assoc_v(x, cdr_y_list);
-                } else {
-                    return None;
-                }
+                None
             }
         } else {
             panic!("Invalid alist! Keys must be atomic, but there was: {y}");
@@ -155,15 +152,15 @@ fn sub2(x: List, z: Atom) -> Atom {
         if let SExpression::Atom(caar_x) = car(car_x.clone()) {
             if eq(caar_x, z.clone()) {
                 match cdr(car_x) {
-                    SExpression::Atom(cadr_x) => return cadr_x,
+                    SExpression::Atom(cadr_x) => cadr_x,
                     SExpression::List(_cadr_x) => {
                         todo!("must v be atomic?");
                     }
                 }
             } else {
                 match cdr(x) {
-                    SExpression::Atom(_cdr_x) => return z,
-                    SExpression::List(cdr_x) => return sub2(cdr_x, z),
+                    SExpression::Atom(_cdr_x) => z,
+                    SExpression::List(cdr_x) => sub2(cdr_x, z),
                 }
             }
         } else {
@@ -186,8 +183,8 @@ fn sub2(x: List, z: Atom) -> Atom {
 ///         = ("three" "two" "one")
 /// ```
 pub fn sublis(x: List, y: SExpression) -> SExpression {
-    match y.clone() {
-        SExpression::Atom(ay) => sub2(x.into(), ay).into(),
+    match y {
+        SExpression::Atom(ay) => sub2(x, ay).into(),
         SExpression::List(ly) => {
             cons(sublis(x.clone(), car(ly.clone())), sublis(x, cdr(ly))).into()
         }
@@ -212,7 +209,7 @@ fn test_append() {
 #[test]
 fn test_among() {
     assert!(among((42.).into(), list![1, 2, 3, 42].into()));
-    assert_eq!(among(T.into(), list![1, 2, 3, 42].into()), false);
+    assert!(!among(T.into(), list![1, 2, 3, 42].into()));
 }
 
 #[test]
@@ -242,7 +239,7 @@ fn test_pair() {
 
     let input_x = list![a.clone(), b.clone(), c.clone()];
     let input_y = list![x.clone(), list![y.clone(), z.clone()], u.clone()];
-    let output = pair(input_x.clone().into(), input_y.clone().into());
+    let output = pair(input_x.into(), input_y.into());
 
     let expected_output = list![cons(a, x), cons(b, list![y, z]), cons(c, u)];
 
@@ -255,7 +252,7 @@ fn test_pairlis() {
         pairlis(
             list!["A", "B", "C"].into(),
             list!["U", "V", "W"].into(),
-            list![list!["D", "X"], list!["E", "Y"]].into()
+            list![list!["D", "X"], list!["E", "Y"]]
         ),
         list![
             list!["A", "U"],
@@ -264,7 +261,6 @@ fn test_pairlis() {
             list!["D", "X"],
             list!["E", "Y"]
         ]
-        .into()
     );
 }
 
@@ -302,16 +298,16 @@ fn test_sub2() {
     assert_eq!(sub2(list![cons(1, "one")], 1.into()), "one".into());
     assert_eq!(sub2(list![cons(1, "one")], 2.into()), 2.into());
     assert_eq!(
-        sub2(list![cons(1, "one"), cons(2, "two")].into(), 1.into()),
+        sub2(list![cons(1, "one"), cons(2, "two")], 1.into()),
         "one".into()
     );
 
     assert_eq!(
-        sub2(list![cons(1, "one"), cons(2, "two")].into(), 2.into()),
+        sub2(list![cons(1, "one"), cons(2, "two")], 2.into()),
         "two".into()
     );
     assert_eq!(
-        sub2(list![cons(1, "one"), cons(2, "two")].into(), 3.into()),
+        sub2(list![cons(1, "one"), cons(2, "two")], 3.into()),
         3.into()
     );
 }
