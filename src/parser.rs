@@ -1,9 +1,8 @@
 use log::error;
-use regex::Regex;
 
 use crate::{
     elementary_functions::cons,
-    types::{Atom, ElementaryFunction, NullableList, SExpression, Symbol, NIL},
+    types::{Atom, ElementaryFunction, NullableList, SExpression, Symbol, NIL, T},
 };
 
 pub fn parse(s: &str) -> Option<SExpression> {
@@ -14,14 +13,14 @@ pub fn parse(s: &str) -> Option<SExpression> {
     if s.starts_with('(') {
         parse_sexp(s)
     } else {
-        parse_symbol(s).map(|atom| atom.into())
+        parse_atom(s).map(|atom| atom.into())
     }
 }
 fn check_parenthesis(s: &str) -> bool {
     s.chars().filter(|c| *c == '(').count() == s.chars().filter(|c| *c == ')').count()
 }
 
-fn parse_symbol(s: &str) -> Option<Atom> {
+fn parse_atom(s: &str) -> Option<Atom> {
     parse_as_keyword(s).or_else(|| {
         parse_as_number(s).or_else(|| parse_as_string(s).or_else(|| parse_as_other_symbol(s)))
     })
@@ -39,6 +38,9 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "CDR" => Some(ElementaryFunction::CDR.into()),
         "CONS" => Some(ElementaryFunction::CONS.into()),
         "EQ" => Some(ElementaryFunction::EQ.into()),
+
+        "T" => Some(T.into()),
+        "NIL" => Some(NIL.into()),
         _ => None,
     }
 }
@@ -74,43 +76,66 @@ fn parse_as_other_symbol(s: &str) -> Option<Atom> {
 }
 
 fn parse_sexp(s: &str) -> Option<SExpression> {
-    match s
-        .strip_prefix('(')
-        .and_then(|no_prefix| no_prefix.strip_suffix(')'))
-    {
-        Some(symbols_str) => {
-            let re = Regex::new(r#"".*?"|\(.*?\)|\w+"#).unwrap();
-            let mut sexps: Vec<SExpression> = Vec::new();
+    let sraka: String = s.replace('(', " ( ").replace(')', " ) ");
+    let tokens: Vec<&str> = sraka.split_whitespace().collect();
 
-            for capture in re.captures_iter(symbols_str) {
-                let symbol = capture.get(0).unwrap().as_str();
-                if symbol.starts_with('(') {
-                    sexps.push(parse_sexp(symbol)?);
-                } else {
-                    sexps.push(parse_symbol(symbol)?.into());
-                }
-            }
-
-            Some(iter_to_lisp_list(sexps).into())
-        }
-        None => {
-            error!(
-                "Invalid S-expression: {}. S-expressions must be enclosed in parenthesis.",
-                s
-            );
-            None
-        }
+    match parse_loop(&tokens, 0, &mut 0) {
+        (Some(sexp), _) => Some(sexp),
+        (None, _) => todo!("Failed to parse!"),
     }
 }
 
-fn iter_to_lisp_list<I>(iter: I) -> NullableList
+// TODO: get rid of the depth argument and overall prettify the function
+fn parse_loop<'a>(
+    tokens: &'a Vec<&'a str>,
+    mut depth: u8,
+    i: &mut usize,
+) -> (Option<SExpression>, u8) {
+    let mut sexps: Vec<SExpression> = Vec::new();
+    match tokens.get(*i) {
+        Some(token) => match *token {
+            "(" => {
+                depth += 1;
+                loop {
+                    *i += 1;
+                    match parse_loop(tokens, depth, i) {
+                        (Some(parsed), new_depth) => {
+                            if new_depth == depth - 1 {
+                                return (Some(iter_to_lisp_list(sexps.iter()).into()), depth);
+                            } else {
+                                sexps.push(parsed);
+                            }
+                        }
+                        (None, _) => todo!("ERROR"),
+                    }
+                }
+            }
+            ")" => {
+                if depth == 0 {
+                    todo!("Unexpected end of sexp?")
+                } else {
+                    (Some(iter_to_lisp_list(sexps.iter()).into()), depth - 1)
+                }
+            }
+            t => match parse_atom(t) {
+                Some(atom) => (Some(atom.into()), depth),
+                None => {
+                    log::error!("Invalid token: {}", t);
+                    (None, depth)
+                }
+            },
+        },
+        None => todo!("Unexpected end of input"),
+    }
+}
+
+fn iter_to_lisp_list<'a, I>(mut iter: I) -> NullableList
 where
-    I: IntoIterator<Item = SExpression>,
+    I: Iterator<Item = &'a SExpression>,
 {
-    let mut i = iter.into_iter();
-    match i.next() {
+    match iter.next() {
         None => NIL.into(),
-        Some(h) => cons(h, iter_to_lisp_list(i)).into(),
+        Some(h) => cons(h.clone(), iter_to_lisp_list(iter)).into(),
     }
 }
 
@@ -121,15 +146,20 @@ mod test_parser {
     use super::*;
 
     #[test]
+    #[allow(clippy::approx_constant)]
     fn test_parse_atomic_symbol() {
         assert_eq!(parse("1"), Some(1.into()));
         assert_eq!(parse("1.23"), Some(1.23.into()));
         assert_eq!(parse("123456789"), Some(123456789.into()));
         assert_eq!(parse("3.141592653589"), Some(3.141592653589.into()));
-        assert_eq!(parse("\"1\""), Some("1".into()));
-        assert_eq!(parse("\"1.23\""), Some("1.23".into()));
-        assert_eq!(parse("A"), Some(Symbol::Other("A".to_string()).into()));
         assert_eq!(parse("\"A\""), Some(Atom::String("A".to_string()).into()));
+        assert_eq!(
+            parse("\"A B C\""),
+            Some(Atom::String("A B C".to_string()).into())
+        );
+        assert_eq!(parse("\"1\""), Some(Atom::String("1".into()).into()));
+        assert_eq!(parse("\"1.23\""), Some(Atom::String("1.23".into()).into()));
+        assert_eq!(parse("A"), Some(Symbol::Other("A".to_string()).into()));
         assert_eq!(parse("\"A"), None);
         assert_eq!(parse("A\""), None);
         assert_eq!(
@@ -138,7 +168,8 @@ mod test_parser {
         );
     }
     #[test]
-    fn test_args() {
+    fn test_parse_lists() {
+        assert_eq!(parse("()"), Some(NIL.into()));
         assert_eq!(
             parse("(A)"),
             Some(list![Symbol::Other("A".to_string())].into())
@@ -165,6 +196,32 @@ mod test_parser {
             )
         );
         assert_eq!(
+            parse("(A B (C) D)"),
+            Some(
+                list![
+                    Symbol::Other("A".to_string()),
+                    Symbol::Other("B".to_string()),
+                    list![Symbol::Other("C".to_string())],
+                    Symbol::Other("D".to_string())
+                ]
+                .into()
+            )
+        );
+        assert_eq!(
+            parse("((A B) (C) D)"),
+            Some(
+                list![
+                    list![
+                        Symbol::Other("A".to_string()),
+                        Symbol::Other("B".to_string())
+                    ],
+                    list![Symbol::Other("C".to_string())],
+                    Symbol::Other("D".to_string())
+                ]
+                .into()
+            )
+        );
+        assert_eq!(
             parse("(A \"B\")"),
             Some(
                 list![
@@ -185,14 +242,14 @@ mod test_parser {
                 .into()
             )
         );
-        // TODO: this should be a parsing error
+        // TODO: make sure that interpreter fails with "Tried to use string as a function"
         assert_eq!(
             parse(r#"("A" "B")"#),
             Some(list![Atom::String("A".to_string()), Atom::String("B".to_string())].into())
         );
     }
     #[test]
-    fn test_function_parsing() {
+    fn test_keyword_parsing() {
         assert_eq!(
             parse("(atom)"),
             Some(list![ElementaryFunction::ATOM].into())
@@ -204,6 +261,12 @@ mod test_parser {
             Some(list![ElementaryFunction::CONS].into())
         );
         assert_eq!(parse("(eq)"), Some(list![ElementaryFunction::EQ].into()));
+
+        assert_eq!(parse("(cond)"), Some(list![Symbol::COND].into()));
+        assert_eq!(parse("(lambda)"), Some(list![Symbol::LAMBDA].into()));
+        assert_eq!(parse("(label)"), Some(list![Symbol::LABEL].into()));
+        assert_eq!(parse("(T)"), Some(list![T].into()));
+        assert_eq!(parse("(NIL)"), Some(list![NIL].into()));
     }
     #[test]
     fn test_fun_with_args_parsing() {
@@ -218,6 +281,16 @@ mod test_parser {
         assert_eq!(
             parse("(atom x)"),
             Some(list![ElementaryFunction::ATOM, Symbol::Other("x".to_string())].into())
+        );
+        assert_eq!(
+            parse("(atom (quote x))"),
+            Some(
+                list![
+                    ElementaryFunction::ATOM,
+                    list![Symbol::QUOTE, Symbol::Other("x".to_string())]
+                ]
+                .into()
+            )
         );
         assert_eq!(
             parse("(atom \"x\")"),
@@ -256,5 +329,30 @@ mod test_parser {
                 .into()
             )
         );
+        assert_eq!(
+            parse("(cons (quote A) (quote B))"),
+            Some(
+                list![
+                    ElementaryFunction::CONS,
+                    list![Symbol::QUOTE, "A"],
+                    list![Symbol::QUOTE, "B"]
+                ]
+                .into()
+            )
+        );
+        assert_eq!(
+            parse("(car (cons (quote A) (quote B)))"),
+            Some(
+                list![
+                    ElementaryFunction::CAR,
+                    list![
+                        ElementaryFunction::CONS,
+                        list![Symbol::QUOTE, "A"],
+                        list![Symbol::QUOTE, "B"]
+                    ]
+                ]
+                .into()
+            )
+        )
     }
 }

@@ -9,9 +9,9 @@ fn test_parse_eval_ff() {
 
 #[test]
 fn test_parse_eval_car_cons() {
-    // let text = "(car (cons 1 2))";
-    // let prog = parse(text).unwrap();
-    // assert_eq!(dbg!(dbg!(prog).eval()), 1.into());
+    let text = "(car (cons 1 2))";
+    let prog = parse(text).unwrap();
+    assert_eq!(dbg!(dbg!(prog).eval()), 1.into());
 
     let text = "(car (cons (quote A) (quote B)))";
     let prog = parse(text).unwrap();
