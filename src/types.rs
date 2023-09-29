@@ -1,6 +1,9 @@
 use std::fmt::{Debug, Display};
 
-use crate::elementary_functions::{car, cdr};
+use crate::{
+    elementary_functions::{car, cdr},
+    interpreter::eval,
+};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Bool {
@@ -42,9 +45,18 @@ impl From<Bool> for Atom {
         }
     }
 }
+
+// NOTE: this leads to HUGE confusion
+// consider using Symbol::Other and Atom::String directly
+// in places where the difference is crucial
 impl From<String> for Symbol {
     fn from(s: String) -> Self {
         Self::Other(s)
+    }
+}
+impl From<&str> for Symbol {
+    fn from(s: &str) -> Self {
+        Self::Other(s.to_string())
     }
 }
 
@@ -102,11 +114,6 @@ impl From<f64> for Atom {
 impl From<i32> for Atom {
     fn from(n: i32) -> Self {
         Atom::Number(n.into())
-    }
-}
-impl From<&str> for Atom {
-    fn from(s: &str) -> Self {
-        Atom::String(s.to_string())
     }
 }
 impl<T: Into<Symbol>> From<T> for Atom {
@@ -314,6 +321,12 @@ impl Display for SExpression {
             SExpression::Atom(a) => f.write_fmt(format_args!("{}", a)),
             SExpression::List(l) => f.write_fmt(format_args!("{}", l)),
         }
+    }
+}
+
+impl SExpression {
+    pub fn eval(self) -> SExpression {
+        eval(self, NIL.into())
     }
 }
 
