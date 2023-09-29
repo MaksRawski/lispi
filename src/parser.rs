@@ -79,53 +79,38 @@ fn parse_sexp(s: &str) -> Option<SExpression> {
     let sraka: String = s.replace('(', " ( ").replace(')', " ) ");
     let tokens: Vec<&str> = sraka.split_whitespace().collect();
 
-    match parse_loop(&tokens, 0, &mut 0) {
-        (Some(sexp), _) => Some(sexp),
-        (None, _) => todo!("Failed to parse!"),
-    }
+    parse_loop(&tokens, &mut 0)
 }
 
-// TODO: get rid of the depth argument and overall prettify the function
-fn parse_loop<'a>(
-    tokens: &'a Vec<&'a str>,
-    mut depth: u8,
-    i: &mut usize,
-) -> (Option<SExpression>, u8) {
+fn parse_loop<'a>(tokens: &'a Vec<&'a str>, i: &mut usize) -> Option<SExpression> {
     let mut sexps: Vec<SExpression> = Vec::new();
-    match tokens.get(*i) {
-        Some(token) => match *token {
-            "(" => {
-                depth += 1;
-                loop {
-                    *i += 1;
-                    match parse_loop(tokens, depth, i) {
-                        (Some(parsed), new_depth) => {
-                            if new_depth == depth - 1 {
-                                return (Some(iter_to_lisp_list(sexps.iter()).into()), depth);
-                            } else {
-                                sexps.push(parsed);
-                            }
+
+    if let Some(token) = tokens.get(*i) {
+        match *token {
+            "(" => loop {
+                *i += 1;
+                if tokens.get(*i) != Some(&")") {
+                    match parse_loop(tokens, i) {
+                        Some(parsed) => {
+                            sexps.push(parsed);
                         }
-                        (None, _) => todo!("ERROR"),
+                        None => todo!("ERROR"),
                     }
-                }
-            }
-            ")" => {
-                if depth == 0 {
-                    todo!("Unexpected end of sexp?")
                 } else {
-                    (Some(iter_to_lisp_list(sexps.iter()).into()), depth - 1)
-                }
-            }
-            t => match parse_atom(t) {
-                Some(atom) => (Some(atom.into()), depth),
-                None => {
-                    log::error!("Invalid token: {}", t);
-                    (None, depth)
+                    return Some(iter_to_lisp_list(sexps.iter()).into());
                 }
             },
-        },
-        None => todo!("Unexpected end of input"),
+            ")" => panic!("unexpected closing parenthesis"),
+            t => match parse_atom(t) {
+                Some(atom) => Some(atom.into()),
+                None => {
+                    log::error!("Invalid token: {}", t);
+                    None
+                }
+            },
+        }
+    } else {
+        todo!("Unexpected end of input")
     }
 }
 
@@ -353,6 +338,6 @@ mod test_parser {
                 ]
                 .into()
             )
-        )
+        );
     }
 }
