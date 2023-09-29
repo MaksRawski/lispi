@@ -67,10 +67,11 @@ fn parse_as_string(s: &str) -> Option<Atom> {
 }
 
 fn parse_as_other_symbol(s: &str) -> Option<Atom> {
-    if s.chars().filter(|c| *c == '"').count() == 0 && s.split_whitespace().count() == 1 {
+    // according to the paper atom can only be a sequence of letters
+    if s.chars().filter(|c| char::is_alphabetic(*c)).count() == s.len() {
         Some(Atom::Symbol(Symbol::Other(s.to_string())))
     } else {
-        error!("A symbol cannot contain spaces or quotes: {}", s);
+        error!("Not a valid symbol: {}", s);
         None
     }
 }
@@ -82,35 +83,31 @@ fn parse_sexp(s: &str) -> Option<SExpression> {
     parse_loop(&tokens, &mut 0)
 }
 
+// TODO: the signature here is kinda ugly, maybe use iterators??
 fn parse_loop<'a>(tokens: &'a Vec<&'a str>, i: &mut usize) -> Option<SExpression> {
     let mut sexps: Vec<SExpression> = Vec::new();
 
-    if let Some(token) = tokens.get(*i) {
-        match *token {
-            "(" => loop {
+    if let Some(&token) = tokens.get(*i) {
+        if token == "(" {
+            *i += 1;
+            while tokens.get(*i) != Some(&")") {
+                let parsed = parse_loop(tokens, i)?;
+                sexps.push(parsed);
                 *i += 1;
-                if tokens.get(*i) != Some(&")") {
-                    match parse_loop(tokens, i) {
-                        Some(parsed) => {
-                            sexps.push(parsed);
-                        }
-                        None => todo!("ERROR"),
-                    }
-                } else {
-                    return Some(iter_to_lisp_list(sexps.iter()).into());
-                }
-            },
-            ")" => panic!("unexpected closing parenthesis"),
-            t => match parse_atom(t) {
+            }
+            return Some(iter_to_lisp_list(sexps.iter()).into());
+        } else {
+            match parse_atom(token) {
                 Some(atom) => Some(atom.into()),
                 None => {
-                    log::error!("Invalid token: {}", t);
+                    log::error!("Invalid token: {}", token);
                     None
                 }
-            },
+            }
         }
     } else {
-        todo!("Unexpected end of input")
+        log::error!("Unexpected end of input!");
+        None
     }
 }
 
@@ -339,5 +336,13 @@ mod test_parser {
                 .into()
             )
         );
+    }
+    #[test]
+    fn test_parser_edge_cases() {
+        // env_logger::init();
+        assert_eq!(parse("("), None);
+        assert_eq!(parse(")"), None);
+        assert_eq!(parse("()"), Some(NIL.into()));
+        assert_eq!(parse(")("), None);
     }
 }
