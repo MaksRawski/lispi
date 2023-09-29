@@ -191,12 +191,10 @@ fn display_list(l: &List, is_cdr: bool) -> String {
             SExpression::List(cdr_l) => {
                 if is_cons(&cdr_l) {
                     format!("({car_l} . {})", display_list(&cdr_l, false))
+                } else if is_cdr {
+                    format!("{car_l}, {}", display_list(&cdr_l, true))
                 } else {
-                    if is_cdr {
-                        format!("{car_l}, {}", display_list(&cdr_l, true))
-                    } else {
-                        format!("[{car_l}, {}]", display_list(&cdr_l, true))
-                    }
+                    format!("[{car_l}, {}]", display_list(&cdr_l, true))
                 }
             }
         },
@@ -204,7 +202,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
             SExpression::Atom(cdr_l) => {
                 if cdr_l == NIL.into() {
                     if is_cdr {
-                        format!("{}", display_list(&car_l, false))
+                        display_list(&car_l, false)
                     } else {
                         format!("[{}]", display_list(&car_l, false))
                     }
@@ -219,20 +217,18 @@ fn display_list(l: &List, is_cdr: bool) -> String {
                         display_list(&car_l, false),
                         display_list(&cdr_l, false)
                     )
+                } else if is_cdr {
+                    format!(
+                        "{}, {}",
+                        display_list(&car_l, false),
+                        display_list(&cdr_l, true),
+                    )
                 } else {
-                    if is_cdr {
-                        format!(
-                            "{}, {}",
-                            display_list(&car_l, false),
-                            display_list(&cdr_l, true),
-                        )
-                    } else {
-                        format!(
-                            "[{}, {}]",
-                            display_list(&car_l, false),
-                            display_list(&cdr_l, true)
-                        )
-                    }
+                    format!(
+                        "[{}, {}]",
+                        display_list(&car_l, false),
+                        display_list(&cdr_l, true)
+                    )
                 }
             }
         },
