@@ -5,6 +5,7 @@ use crate::recursive_functions::*;
 use crate::types::*;
 
 /// append x to y
+/// will return y if x is null
 pub fn append(x: SExpression, y: SExpression) -> SExpression {
     if null(x.clone()) {
         return y;
@@ -28,7 +29,7 @@ pub fn among(x: SExpression, y: SExpression) -> bool {
 
 /// returns an association list: list of pairs of corresponding elements of x and y
 /// x and y must be both of the same type: either both lists or both atoms
-/// returns NIL only if both elements are NIL
+/// returns NIL only if both arguments are NIL
 pub fn pair(x: SExpression, y: SExpression) -> NullableList {
     if null(x.clone()) && null(y.clone()) {
         return NIL.into();
