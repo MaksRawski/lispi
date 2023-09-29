@@ -67,7 +67,7 @@ fn parse_as_string(s: &str) -> Option<Atom> {
 }
 
 fn parse_as_other_symbol(s: &str) -> Option<Atom> {
-    // according to the paper atom can only be a sequence of letters
+    // according to the paper atom is just a sequence of letters
     if s.chars().filter(|c| char::is_alphabetic(*c)).count() == s.len() {
         Some(Atom::Symbol(Symbol::Other(s.to_string())))
     } else {
@@ -78,22 +78,22 @@ fn parse_as_other_symbol(s: &str) -> Option<Atom> {
 
 fn parse_sexp(s: &str) -> Option<SExpression> {
     let sraka: String = s.replace('(', " ( ").replace(')', " ) ");
-    let tokens: Vec<&str> = sraka.split_whitespace().collect();
-
-    parse_loop(&tokens, &mut 0)
+    let mut tokens = sraka.split_whitespace().into_iter().peekable();
+    parse_tokens_iter(&mut tokens)
 }
 
-// TODO: the signature here is kinda ugly, maybe use iterators??
-fn parse_loop<'a>(tokens: &'a Vec<&'a str>, i: &mut usize) -> Option<SExpression> {
-    let mut sexps: Vec<SExpression> = Vec::new();
-
-    if let Some(&token) = tokens.get(*i) {
+fn parse_tokens_iter<'a, I>(tokens: &mut std::iter::Peekable<I>) -> Option<SExpression>
+where
+    I: Iterator<Item = &'a str>,
+{
+    if let Some(&token) = tokens.peek() {
         if token == "(" {
-            *i += 1;
-            while tokens.get(*i) != Some(&")") {
-                let parsed = parse_loop(tokens, i)?;
+            let mut sexps: Vec<SExpression> = Vec::new();
+            tokens.next();
+            while tokens.peek() != Some(&")") {
+                let parsed = parse_tokens_iter(tokens)?;
                 sexps.push(parsed);
-                *i += 1;
+                tokens.next();
             }
             return Some(iter_to_lisp_list(sexps.iter()).into());
         } else {
