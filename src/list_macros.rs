@@ -3,8 +3,6 @@ use crate::types::*;
 
 /// Abbreviation which allows one to write `list![e1, e2, ..., en]` instead of
 /// `cons(e1, cons(e2, ..., cons(en, NIL)))`
-///
-/// requires `elementary_functions` and `types` to be in scope
 #[macro_export]
 macro_rules! list {
     ( $head:expr ) =>{{
@@ -39,7 +37,7 @@ pub use list;
 #[test]
 fn test_list_macro() {
     assert_eq!(list![T], cons(T, NIL));
-    assert_eq!(list![T, T], cons(T, cons(T, NIL)).into());
+    assert_eq!(list![T, T], cons(T, cons(T, NIL)));
 
     assert_eq!(list![1, 2, 3], cons(1, cons(2, cons(3, NIL))));
 
@@ -85,7 +83,7 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     };
 
     if let SExpression::List(l) = next_list {
-        return compose_car_cdr(&next_composition, l);
+        compose_car_cdr(&next_composition, l)
     } else {
         // we can't just panic here because this function will be called with
         // user provided input so when this function fails user should be provided
@@ -98,6 +96,6 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
         eprintln!("Can't {} atomic: {}", next_composition, next_list);
         dbg!(car_cdr_composition, list);
 
-        return None;
+        None
     }
 }
