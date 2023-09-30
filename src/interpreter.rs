@@ -9,7 +9,7 @@ use crate::{
 
 /// The universal lisp function AKA the interpreter:
 /// applies a function f to a list of arguments x
-pub fn apply(f: SExpression, x: List) -> SExpression {
+pub fn apply(f: SExpression, x: List) -> Option<SExpression> {
     // TODO: look at appendix B of programmer's manual for how to allow usage
     // of other "compiled" functions?
     eval(cons(f, appq(x.into())).into(), NIL.into())
@@ -28,40 +28,50 @@ pub(crate) fn appq(m: SExpression) -> SExpression {
 }
 
 /// handles lambda S-expressions
-fn handle_lambda(e: List, a: NullableList) -> SExpression {
+fn handle_lambda(e: List, a: NullableList) -> Option<SExpression> {
     // e is of the form: ((LAMBDA, binds, expression), args)
     let binds: List = match compose_car_cdr("cadar", e.clone()) {
         Some(SExpression::List(l)) => l,
-        _ => panic!(
-            "Invalid use of LAMBDA: {}, second element should be a list of symbols to bind.",
-            e
-        ),
+        _ => {
+            log::error!(
+                "Invalid use of LAMBDA: {}, second element should be a list of symbols to bind.",
+                e
+            );
+            return None;
+        }
     };
 
-    let expression = compose_car_cdr("caddar", e.clone()).unwrap_or_else(|| {
-        panic!(
+    let expression = compose_car_cdr("caddar", e.clone()).or_else(|| {
+        log::error!(
             "Invalid use of LAMBDA: {}, third element should be an S-expression.",
             e
-        )
-    });
+        );
+        None
+    })?;
     // evaluate the args before putting them into the expression
     let args: List = match cdr(e.clone()) {
-        SExpression::Atom(arg) => cons(eval(arg.into(), a.clone()), NIL),
-        SExpression::List(args) => match evlis(args.into(), a.clone()) {
+        SExpression::Atom(arg) => cons(eval(arg.into(), a.clone())?, NIL),
+        SExpression::List(args) => match evlis(args.into(), a.clone())? {
             NullableList::List(evaluated_args) => evaluated_args,
-            NullableList::NIL => panic!(
-                "Invalid use of LAMBDA: {}, Failed to eval the arguments.",
-                e
-            ),
+            NullableList::NIL => {
+                log::error!(
+                    "Invalid use of LAMBDA: {}, Failed to eval the arguments.",
+                    e
+                );
+                return None;
+            }
         },
     };
 
     let bound_symbols = match pair(binds.into(), args.into()) {
         NullableList::List(l) => l,
-        NullableList::NIL => panic!(
-            "Invalid use of LAMBDA: {}, no arguments to evaluate the lambda were provided.",
-            e
-        ),
+        NullableList::NIL => {
+            log::error!(
+                "Invalid use of LAMBDA: {}, no arguments to evaluate the lambda were provided.",
+                e
+            );
+            return None;
+        }
     };
 
     let new_association_list = match a {
@@ -76,18 +86,24 @@ fn handle_lambda(e: List, a: NullableList) -> SExpression {
 }
 
 /// utility function for the monstrocity that is `eval`
-fn handle_label(e: List, a: NullableList) -> SExpression {
+fn handle_label(e: List, a: NullableList) -> Option<SExpression> {
     // the entire e is of the form: ((LABEL, function_name, expression), args)
     let function_name: String = match compose_car_cdr("cadar", e.clone()) {
         Some(SExpression::Atom(Atom::Symbol(Symbol::Other(s))))
         | Some(SExpression::Atom(Atom::String(s))) => s,
-        _ => panic!("Second argument of LABEL should be a string: {}", e,),
+        _ => {
+            log::error!("Second argument of LABEL should be a string: {}", e);
+            return None;
+        }
     };
 
     let expression = match compose_car_cdr("caddar", e.clone()) {
         Some(SExpression::Atom(_)) => todo!("Do we allow expressions to be atoms?"),
         Some(expr) => expr,
-        None => panic!("LABEL is missing an associated expression: {}", e),
+        None => {
+            log::error!("LABEL is missing an associated expression: {}", e);
+            return None;
+        }
     };
     let args = cdr(e.clone());
 
@@ -102,35 +118,36 @@ fn handle_label(e: List, a: NullableList) -> SExpression {
 }
 
 /// evaluates an expression using association list `a`
-pub(crate) fn eval(e: SExpression, a: NullableList) -> SExpression {
+pub(crate) fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
     match e {
         SExpression::Atom(e_atom) => match a {
-            NullableList::List(a_list) => assoc_v(e_atom.clone(), a_list).unwrap_or(e_atom.into()),
-            NullableList::NIL => e_atom.into(),
+            NullableList::List(a_list) => Some(assoc_v(e_atom.clone(), a_list).unwrap_or(e_atom.into())),
+            NullableList::NIL => Some(e_atom.into()),
         },
         SExpression::List(e_list) => match car(e_list.clone()) {
             SExpression::Atom(car_e) => match car_e {
-                Atom::Symbol(Symbol::QUOTE) => compose_car_cdr("cadr", e_list).unwrap(),
+                Atom::Symbol(Symbol::QUOTE) => Some(compose_car_cdr("cadr", e_list).unwrap()),
                 Atom::Symbol(Symbol::COND) => match cdr(e_list.clone()){
                     SExpression::List(terms) => evcon(terms, a),
                     SExpression::Atom(_) => panic!("COND requires arguments to be of the form: (predicate expression), got: {}", e_list),
                 }
                 Atom::Symbol(Symbol::ElementaryFunction(f)) => match f {
                     ElementaryFunction::ATOM => match compose_car_cdr("cadr", e_list) {
-                        Some(arg) => atom(eval(arg, a)).into(),
-                        None => NIL.into(),
+                        Some(arg) => Some(atom(eval(arg, a)?).into()),
+                        None => Some(NIL.into()), // TODO: is this ok?
                     },
                     ElementaryFunction::EQ => match cdr(e_list.clone()) {
-                        SExpression::List(arguments) => equal(
-                            eval(car(arguments.clone()), a.clone()),
+                        SExpression::List(arguments) => Some(equal(
+                            eval(car(arguments.clone()), a.clone())?,
                             eval(
-                                compose_car_cdr("cadr", arguments).unwrap_or_else(|| {
-                                    panic!("EQ requires two arguments: {}", e_list)
-                                }),
+                                compose_car_cdr("cadr", arguments).or_else(|| {
+                                    log::error!("EQ requires two arguments: {}", e_list);
+                                    None
+                                })?,
                                 a,
-                            ),
+                            )?,
                         )
-                        .into(),
+                        .into()),
                         SExpression::Atom(argument) => {
                             panic!(
                                 "Invalid use of EQ: {} two arguments are required.",
@@ -139,94 +156,101 @@ pub(crate) fn eval(e: SExpression, a: NullableList) -> SExpression {
                         }
                     },
                     ElementaryFunction::CAR => match eval(
-                        compose_car_cdr("cadr", e_list.clone()).unwrap_or_else(|| {
-                            panic!("CAR requires an argument to be a list: {}", e_list)
-                        }),
+                        compose_car_cdr("cadr", e_list.clone()).or_else(|| {
+                            log::error!("CAR requires an argument to be a list: {}", e_list);
+                            None
+                        })?,
                         a,
-                    ) {
-                        SExpression::List(list) => car(list),
-                        SExpression::Atom(argument) => panic!(
-                            "CAR requires an argument to be a list, but was: {}",
-                            argument
-                        ),
+                    )? {
+                        SExpression::List(list) => Some(car(list)),
+                        SExpression::Atom(argument) => {
+                            log::error!("CAR requires an argument to be a list, but was: {}", argument);
+                            None
+                        },
                     },
                     ElementaryFunction::CDR => match eval(
-                        compose_car_cdr("cadr", e_list.clone()).unwrap_or_else(|| {
-                            panic!("CDR requires an argument to be a list: {}", e_list)
-                        }),
+                        compose_car_cdr("cadr", e_list.clone()).or_else(|| {
+                            log::error!("CDR requires an argument to be a list: {}", e_list);
+                            None
+                        })?,
                         a,
-                    ) {
-                        SExpression::List(list) => cdr(dbg!(list)),
-                        SExpression::Atom(argument) => panic!(
-                            "CDR requires an argument to be a list, but was: {}",
-                            argument
-                        ),
+                    )? {
+                        SExpression::List(list) => Some(cdr(list)),
+                        SExpression::Atom(argument) => {
+                            log::error!("CDR requires an argument to be a list, but was: {}", argument);
+                            None
+                        },
                     },
                     ElementaryFunction::CONS => match cdr(e_list.clone()) {
-                        SExpression::List(arguments) => list![
-                            eval(car(arguments.clone()), a.clone()),
+                        SExpression::List(arguments) => Some(list![
+                            eval(car(arguments.clone()), a.clone())?,
                             eval(
-                                compose_car_cdr("cadr", arguments).unwrap_or_else(|| panic!(
-                                    "Second argument of cons can't be NIL: {}",
-                                    e_list
-                                )),
+                                compose_car_cdr("cadr", arguments).or_else(|| {
+                                    log::error!("Second argument of cons can't be NIL: {}", e_list);
+                                    None
+                                })?,
                                 a
-                            )
+                            )?
                         ]
-                        .into(),
+                        .into()),
                         SExpression::Atom(_argument) => {
-                            panic!(
+                            log::error!(
                                 "Invalid use of CONS: {}, two arguments are required.",
                                 e_list
-                            )
+                            );
+                            None
                         }
                     },
                 },
-                Atom::Symbol(Symbol::LAMBDA) => e_list.into(),
-                Atom::Symbol(Symbol::LABEL) => panic!("Invalid use of LABEL: {}", e_list),
-                Atom::Number(n) => panic!("Tried to use {n} like a function: {}", e_list),
-                Atom::Bool(b) => panic!("Tried to use {b:?} like a function: {}", e_list),
+                Atom::Symbol(Symbol::LAMBDA) => Some(e_list.into()),
+                Atom::Symbol(Symbol::LABEL) => {log::error!("Invalid use of LABEL: {}", e_list); None},
+                Atom::Number(n) => {log::error!("Tried to use {n} like a function: {}", e_list); None},
+                Atom::Bool(b) => {log::error!("Tried to use {b:?} like a function: {}", e_list); None},
                 Atom::Symbol(Symbol::Other(s)) | Atom::String(s) => match a.clone() {
                     NullableList::List(a_list) => match cdr(e_list) {
                         SExpression::Atom(argument) => eval(
                             cons(
-                                assoc_v(s.clone().into(), a_list).unwrap_or_else(|| {
-                                    panic!("Invalid function: {}, symbol unbound.", s)
-                                }),
-                                eval(argument.into(), a.clone()),
+                                assoc_v(s.clone().into(), a_list).or_else(|| {
+                                    log::error!("Invalid function: {}, symbol unbound.", s);
+                                    None
+                                })?,
+                                eval(argument.into(), a.clone())?,
                             )
                             .into(),
                             a,
                         ),
                         SExpression::List(arguments) => eval(
                             cons(
-                                assoc_v(s.clone().into(), a_list).unwrap_or_else(|| {
-                                    panic!("Invalid function: {}, symbol unbound.", s)
-                                }),
-                                eval(arguments.into(), a.clone()), // NOTE: paper claims that evlis should be used here
+                                assoc_v(s.clone().into(), a_list).or_else(|| {
+                                    log::error!("Invalid function: {}, symbol unbound.", s);
+                                    None
+                                })?,
+                                eval(arguments.into(), a.clone())?, // NOTE: paper claims that evlis should be used here
                             )
                             .into(),
                             a,
                         ),
                     },
-                    NullableList::NIL => panic!("Invalid function: {}, symbol unbound.", s),
+                    NullableList::NIL => {log::error!("Invalid function: {}, symbol unbound.", s); None},
                 },
             },
             SExpression::List(list_func) => match car(list_func.clone()) {
                 SExpression::Atom(Atom::Symbol(Symbol::LABEL)) => handle_label(e_list, a),
                 SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => handle_lambda(e_list, a),
-                SExpression::Atom(Atom::Symbol(Symbol::QUOTE)) => cdr(list_func),
+                SExpression::Atom(Atom::Symbol(Symbol::QUOTE)) => Some(cdr(list_func)),
                 SExpression::Atom(Atom::Number(_)) => {
-                    panic!("Tried to use a number as a function: {}", e_list)
+                    log::error!("Tried to use a number as a function: {}", e_list);
+                    None
                 }
                 SExpression::Atom(f) => {
                     if cdr(e_list.clone()) == NIL.into() {
                         eval(list_func.into(), a)
                     } else {
-                        panic!("Tried to use {f} like LABEL or LAMBDA: {}", e_list)
+                        log::error!("Tried to use {f} like LABEL or LAMBDA: {}", e_list);
+                        None
                     }
                 }
-                SExpression::List(_) => panic!("Tried to use a list as a function: {}", e_list),
+                SExpression::List(_) => {log::error!("Tried to use a list as a function: {}", e_list); None},
             },
         },
     }
@@ -234,21 +258,25 @@ pub(crate) fn eval(e: SExpression, a: NullableList) -> SExpression {
 
 /// evaulates the propositional terms in order, and chooses
 /// the form following the first true predicate
-fn evcon(c: List, a: NullableList) -> SExpression {
-    let predicate = compose_car_cdr("caar", c.clone()).unwrap_or_else(|| {
-        panic!(
+fn evcon(c: List, a: NullableList) -> Option<SExpression> {
+    let predicate = compose_car_cdr("caar", c.clone()).or_else(|| {
+        log::error!(
             "COND doesn't have a list of predicates as its argument: {}",
             c
-        )
-    });
-    if eval(predicate.clone(), a.clone()) == T.into() {
+        );
+        None
+    })?;
+
+    if eval(predicate.clone(), a.clone())? == T.into() {
         eval(
-            compose_car_cdr("cadar", c.clone()).unwrap_or_else(|| {
-                panic!(
+            compose_car_cdr("cadar", c.clone()).or_else(|| {
+                log::error!(
                     "No S-expression is associated with predicate: {} in: {}",
-                    predicate, c
-                )
-            }),
+                    predicate,
+                    c
+                );
+                None
+            })?,
             a,
         )
     } else {
@@ -257,9 +285,10 @@ fn evcon(c: List, a: NullableList) -> SExpression {
             SExpression::Atom(cdr_c) => {
                 if cdr_c == NIL.into() {
                     log::info!("All clauses failed in: {}", c);
-                    NIL.into()
+                    Some(NIL.into())
                 } else {
-                    panic!("Unexpected atom {} found in COND: {}", cdr_c, c)
+                    log::error!("Unexpected atom {} found in COND: {}", cdr_c, c);
+                    None
                 }
             }
         }
@@ -268,17 +297,17 @@ fn evcon(c: List, a: NullableList) -> SExpression {
 
 /// evalutes expressions in order they appeared
 /// returns a list of results or NIL if m is NIL
-fn evlis(m: NullableList, a: NullableList) -> NullableList {
+fn evlis(m: NullableList, a: NullableList) -> Option<NullableList> {
     match m {
         NullableList::List(m_list) => match cdr(m_list.clone()) {
             SExpression::Atom(cdr_m_list) => {
-                cons(eval(car(m_list), a.clone()), eval(cdr_m_list.into(), a)).into()
+                Some(cons(eval(car(m_list), a.clone())?, eval(cdr_m_list.into(), a)?).into())
             }
             SExpression::List(cdr_m_list) => {
-                cons(eval(car(m_list), a.clone()), evlis(cdr_m_list.into(), a)).into()
+                Some(cons(eval(car(m_list), a.clone())?, evlis(cdr_m_list.into(), a)?).into())
             }
         },
-        NullableList::NIL => NIL.into(),
+        NullableList::NIL => Some(NIL.into()),
     }
 }
 
@@ -369,7 +398,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         )
     }
     #[test]
@@ -384,7 +413,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            list!["B"].into()
+            Some(list!["B"].into())
         )
     }
     #[test]
@@ -399,7 +428,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            list!["A", "B"].into()
+            Some(list!["A", "B"].into())
         );
         // (cons (cons 'A 'B) 'C) => (('A 'B) 'C)
         assert_eq!(
@@ -412,7 +441,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            list![list!["A", "B"], "C"].into()
+            Some(list![list!["A", "B"], "C"].into())
         );
     }
     #[test]
@@ -427,7 +456,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            T.into()
+            Some(T.into())
         );
         assert_eq!(
             eval(
@@ -439,21 +468,21 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            NIL.into()
+            Some(NIL.into())
         );
         assert_eq!(
             eval(
                 list![ElementaryFunction::EQ, "x", "y"].into(),
                 list![cons("x", 1), cons("y", 1)].into()
             ),
-            T.into()
+            Some(T.into())
         );
     }
     #[test]
     fn test_eval_atom() {
         assert_eq!(
             eval(list![ElementaryFunction::ATOM, "x"].into(), NIL.into()),
-            T.into()
+            Some(T.into())
         );
         assert_eq!(
             eval(
@@ -464,14 +493,14 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            NIL.into()
+            Some(NIL.into())
         );
         assert_eq!(
             eval(
                 list![ElementaryFunction::ATOM, "x"].into(),
                 list![cons("x", list![1, 2, 3])].into()
             ),
-            NIL.into()
+            Some(NIL.into())
         );
     }
     #[test]
@@ -485,7 +514,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            1.into()
+            Some(1.into())
         );
         assert_eq!(
             eval(
@@ -500,7 +529,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         );
         assert_eq!(
             eval(
@@ -519,7 +548,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            list!["A", "B"].into()
+            Some(list!["A", "B"].into())
         );
     }
 }
@@ -535,7 +564,7 @@ mod handle_lambda_tests {
         let lambda_expr = list![Symbol::LAMBDA, list!["x"], "x"];
         assert_eq!(
             handle_lambda(list![lambda_expr, list![Symbol::QUOTE, "A"]], NIL.into()),
-            "A".into()
+            Some("A".into())
         );
     }
 
@@ -548,7 +577,7 @@ mod handle_lambda_tests {
                 list![lambda, list![Symbol::QUOTE, "A"], list![Symbol::QUOTE, "B"]],
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         );
 
         let lambda = list![Symbol::LAMBDA, list!["x", "y"], "y"];
@@ -557,7 +586,7 @@ mod handle_lambda_tests {
                 list![lambda, list![Symbol::QUOTE, "A"], list![Symbol::QUOTE, "B"]],
                 NIL.into()
             ),
-            "B".into()
+            Some("B".into())
         );
     }
     #[test]
@@ -582,7 +611,7 @@ mod handle_lambda_tests {
                 ],
                 NIL.into()
             ),
-            "B".into()
+            Some("B".into())
         );
 
         assert_eq!(
@@ -594,7 +623,7 @@ mod handle_lambda_tests {
                 ],
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         );
     }
 }
@@ -630,7 +659,7 @@ mod handle_label_tests {
 
         assert_eq!(
             handle_label(list![ff.clone(), list![Symbol::QUOTE, "A"]], NIL.into()),
-            "A".into()
+            Some("A".into())
         );
 
         assert_eq!(
@@ -638,7 +667,7 @@ mod handle_label_tests {
                 list![ff.clone(), list![Symbol::QUOTE, list!["A", "B"]]],
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         );
 
         assert_eq!(
@@ -646,7 +675,7 @@ mod handle_label_tests {
                 list![ff, list![Symbol::QUOTE, list![list!["A", "B"], "C"]]],
                 NIL.into()
             ),
-            "A".into()
+            Some("A".into())
         );
     }
 }

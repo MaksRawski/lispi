@@ -325,7 +325,7 @@ impl Display for SExpression {
 }
 
 impl SExpression {
-    pub fn eval(self) -> SExpression {
+    pub fn eval(self) -> Option<SExpression> {
         eval(self, NIL.into())
     }
 }
