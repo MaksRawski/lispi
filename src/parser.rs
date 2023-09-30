@@ -344,5 +344,8 @@ mod test_parser {
         assert_eq!(parse(")"), None);
         assert_eq!(parse("()"), Some(NIL.into()));
         assert_eq!(parse(")("), None);
+        assert_eq!(parse("\""), None);
+        assert_eq!(parse("A\""), None);
+        assert_eq!(parse("\"A"), None);
     }
 }
