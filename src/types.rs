@@ -62,7 +62,11 @@ impl From<&str> for Symbol {
 
 impl Display for Symbol {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        f.write_fmt(format_args!("{:?}", self))
+        match self {
+            Symbol::Other(s) => f.write_fmt(format_args!("{}", s)),
+            Symbol::ElementaryFunction(e) => f.write_fmt(format_args!("{:?}", e)),
+            _ => f.write_fmt(format_args!("{:?}", self)),
+        }
     }
 }
 
