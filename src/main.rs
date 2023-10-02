@@ -1,5 +1,5 @@
 mod repl;
-use lisp_interpreter::parser::parse;
+use lispi::parser::parse;
 use repl::MyHelper;
 use rustyline::{error::ReadlineError, Editor};
 

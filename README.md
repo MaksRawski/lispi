@@ -1,14 +1,18 @@
-# LISP interpreter 
+# LISP I interpreter 
 ![coverage](https://gitlab.com/MaksRawski/lisp-interpreter/badges/main/coverage.svg)
 
-Implementation of lisp interpreter according to 
-[the original paper from 1960](https://www-formal.stanford.edu/jmc/recursive.pdf)
-and partly
-[the programmer's manual from 1985](https://www.lispmachine.net/books/LISP_1.5_Programmers_Manual.pdf). 
+Welcome to LISP I, the world's most beautiful programming language.
+First discovered by Paul McCarthy in 1960 and described in the paper 
+["Recursive functions of symbolic expressions and their computation by machine"](https://www-formal.stanford.edu/jmc/recursive.pdf).
+Two years later explained in further detail in the 
+[LISP I Programmer's Manual](https://bitsavers.org/pdf/mit/rle_lisp/LISP_I_Programmers_Manual_Mar60.pdf).
+
+This project is an interpreter for the language and I'm on a quest to implement every function described in the manual
+(there is 90 of them listed in the "Alphabetic Index to Functions" on the page 147 of the manual).
 
 ## Usage
-The interpreter and parser are done but I haven't yet got them to work together.
-So for now you can run `cargo test` to run all unit tests and see all those green ok's!
+NOTE: this project is FAR from being finished. Right now only a basic REPL with elementary functions is available.
+After installing from crates.io with `cargo install lispi`, you can get access to the REPL by just running `lispi`.
 
 ## LICENSE
 Obviously MIT. Available in the `LICENSE` file.

@@ -1,4 +1,4 @@
-use lisp_interpreter::parser::parse;
+use lispi::parser::parse;
 
 #[test]
 fn test_parse_eval_ff() {
@@ -20,7 +20,7 @@ fn test_parse_eval_car_cons() {
 
 #[test]
 fn test_parse_eval_cond() {
-    use lisp_interpreter::types::Atom;
+    use lispi::types::Atom;
 
     let text = "(cond ((atom 1) \"OK\") (T \"ERROR\"))";
     let prog = parse(text).unwrap();

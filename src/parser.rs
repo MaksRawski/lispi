@@ -77,8 +77,8 @@ fn parse_as_other_symbol(s: &str) -> Option<Atom> {
 }
 
 fn parse_sexp(s: &str) -> Option<SExpression> {
-    let sraka: String = s.replace('(', " ( ").replace(')', " ) ");
-    let mut tokens = sraka.split_whitespace().into_iter().peekable();
+    let str: String = s.replace('(', " ( ").replace(')', " ) ");
+    let mut tokens = str.split_whitespace().into_iter().peekable();
     parse_tokens_iter(&mut tokens)
 }
 

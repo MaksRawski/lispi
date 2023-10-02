@@ -49,8 +49,8 @@ fn test_list_macro() {
 /// Compose car and cdr functions and apply them to a list.
 /// Example usage:
 /// ```
-/// use lisp_interpreter::list_macros::compose_car_cdr;
-/// use lisp_interpreter::elementary_functions::cons;
+/// use lispi::list_macros::compose_car_cdr;
+/// use lispi::elementary_functions::cons;
 ///
 /// let c = cons(cons(1,2), cons(3,4));
 ///
