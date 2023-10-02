@@ -1,10 +1,10 @@
 use crate::{
     elementary_functions::{car, cdr},
     list_functions::assoc_v,
-    types::{Atom, ElementaryFunction, NullableList, SExpression, Symbol, NIL},
+    types::{Atom, NullableList, SExpression, SpecialForm, Symbol, NIL},
 };
 
-use super::{elementary_fns_glue::*, keywords_glue::*};
+use super::keywords_glue::*;
 
 // /// The universal lisp function AKA the interpreter:
 // /// applies a function f to a list of arguments x
@@ -20,7 +20,7 @@ use super::{elementary_fns_glue::*, keywords_glue::*};
 //     match m {
 //         SExpression::List(l) => cons(appq(car(l.clone())), appq(cdr(l))).into(),
 //         SExpression::Atom(Atom::Symbol(Symbol::ElementaryFunction(f))) => f.into(),
-//         SExpression::Atom(a) => cons(Symbol::QUOTE, a).into(),
+//         SExpression::Atom(a) => cons(SpecialForm::QUOTE, a).into(),
 //     }
 // }
 
@@ -35,15 +35,8 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
         },
         SExpression::List(e_list) => match car(e_list.clone()) {
             SExpression::Atom(car_e) => match car_e {
-                Atom::Symbol(Symbol::QUOTE) => handle_quote(e_list, a),
-                Atom::Symbol(Symbol::COND) => handle_cond(e_list, a),
-                Atom::Symbol(Symbol::ElementaryFunction(f)) => match f {
-                    ElementaryFunction::ATOM => atom_fn(e_list, a),
-                    ElementaryFunction::EQ => eq_fn(e_list, a),
-                    ElementaryFunction::CAR => car_fn(e_list, a),
-                    ElementaryFunction::CDR => cdr_fn(e_list, a),
-                    ElementaryFunction::CONS => cons_fn(e_list, a),
-                },
+                Atom::Symbol(Symbol::SpecialForm(s)) => s.eval(e_list, a),
+                Atom::Symbol(Symbol::ElementaryFunction(f)) => f.eval(e_list, a),
                 Atom::Symbol(Symbol::LAMBDA) => Some(e_list.into()),
                 Atom::Symbol(Symbol::LABEL) => {
                     log::error!("Invalid use of LABEL: {}", e_list);
@@ -57,19 +50,21 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
                     log::error!("Tried to use {b:?} like a function: {}", e_list);
                     None
                 }
-                Atom::Symbol(Symbol::Other(s)) => handle_unknown_symbol(s, e_list, a),
+                Atom::Symbol(Symbol::Other(s)) => handle_other_symbol(s, e_list, a),
             },
-            SExpression::List(list_func) => match car(list_func.clone()) {
+            SExpression::List(compound_func) => match car(compound_func.clone()) {
                 SExpression::Atom(Atom::Symbol(Symbol::LABEL)) => handle_label(e_list, a),
                 SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => handle_lambda(e_list, a),
-                SExpression::Atom(Atom::Symbol(Symbol::QUOTE)) => Some(cdr(list_func)),
+                SExpression::Atom(Atom::Symbol(Symbol::SpecialForm(SpecialForm::QUOTE))) => {
+                    Some(cdr(compound_func))
+                }
                 SExpression::Atom(Atom::Number(_)) => {
                     log::error!("Tried to use a number as a function: {}", e_list);
                     None
                 }
                 SExpression::Atom(f) => {
                     if cdr(e_list.clone()) == NIL.into() {
-                        eval(list_func.into(), a)
+                        eval(compound_func.into(), a)
                     } else {
                         log::error!("Tried to use {f} like LABEL or LAMBDA: {}", e_list);
                         None
@@ -87,7 +82,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
 // #[test]
 // fn test_appq() {
 //     use crate::list_macros::list;
-//     assert_eq!(appq("A".into()), cons(Symbol::QUOTE, "A").into());
+//     assert_eq!(appq("A".into()), cons(SpecialForm::QUOTE, "A").into());
 //     assert_eq!(appq(NIL.into()), NIL.into());
 //     assert_eq!(
 //         appq(ElementaryFunction::ATOM.into()),
@@ -96,17 +91,17 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
 //     assert_eq!(
 //         appq(list!["A", "B", "C"].into()),
 //         list![
-//             cons(Symbol::QUOTE, "A"),
-//             cons(Symbol::QUOTE, "B"),
-//             cons(Symbol::QUOTE, "C")
+//             cons(SpecialForm::QUOTE, "A"),
+//             cons(SpecialForm::QUOTE, "B"),
+//             cons(SpecialForm::QUOTE, "C")
 //         ]
 //         .into()
 //     );
 //     assert_eq!(
 //         appq(list!["A", list!["B", "C"]].into()),
 //         list![
-//             cons(Symbol::QUOTE, "A"),
-//             list![cons(Symbol::QUOTE, "B"), cons(Symbol::QUOTE, "C")]
+//             cons(SpecialForm::QUOTE, "A"),
+//             list![cons(SpecialForm::QUOTE, "B"), cons(SpecialForm::QUOTE, "C")]
 //         ]
 //         .into()
 //     );
@@ -126,7 +121,7 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::CAR,
-                    list![Symbol::QUOTE, list!["A", "B"]]
+                    list![SpecialForm::QUOTE, list!["A", "B"]]
                 ]
                 .into(),
                 NIL.into()
@@ -141,7 +136,7 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::CDR,
-                    list![Symbol::QUOTE, list!["A", "B"]]
+                    list![SpecialForm::QUOTE, list!["A", "B"]]
                 ]
                 .into(),
                 NIL.into()
@@ -155,8 +150,8 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::CONS,
-                    list![Symbol::QUOTE, "A"],
-                    list![Symbol::QUOTE, "B"]
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
                 ]
                 .into(),
                 NIL.into()
@@ -168,8 +163,8 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::CONS,
-                    list![Symbol::QUOTE, list!["A", "B"]],
-                    list![Symbol::QUOTE, "C"]
+                    list![SpecialForm::QUOTE, list!["A", "B"]],
+                    list![SpecialForm::QUOTE, "C"]
                 ]
                 .into(),
                 NIL.into()
@@ -183,8 +178,8 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::EQ,
-                    list![Symbol::QUOTE, "x"],
-                    list![Symbol::QUOTE, "x"]
+                    list![SpecialForm::QUOTE, "x"],
+                    list![SpecialForm::QUOTE, "x"]
                 ]
                 .into(),
                 NIL.into()
@@ -195,8 +190,8 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::EQ,
-                    list![Symbol::QUOTE, "x"],
-                    list![Symbol::QUOTE, "y"]
+                    list![SpecialForm::QUOTE, "x"],
+                    list![SpecialForm::QUOTE, "y"]
                 ]
                 .into(),
                 NIL.into()
@@ -221,7 +216,7 @@ mod elementary_functions_tests {
             eval(
                 list![
                     ElementaryFunction::ATOM,
-                    list![Symbol::QUOTE, list![1, 2, 3]]
+                    list![SpecialForm::QUOTE, list![1, 2, 3]]
                 ]
                 .into(),
                 NIL.into()
@@ -255,8 +250,8 @@ mod elementary_functions_tests {
                     ElementaryFunction::CAR,
                     list![
                         ElementaryFunction::CONS,
-                        list![Symbol::QUOTE, "A"],
-                        list![Symbol::QUOTE, "B"]
+                        list![SpecialForm::QUOTE, "A"],
+                        list![SpecialForm::QUOTE, "B"]
                     ]
                 ]
                 .into(),
@@ -272,10 +267,10 @@ mod elementary_functions_tests {
                         ElementaryFunction::CONS,
                         list![
                             ElementaryFunction::CONS,
-                            list![Symbol::QUOTE, "A"],
-                            list![Symbol::QUOTE, "B"]
+                            list![SpecialForm::QUOTE, "A"],
+                            list![SpecialForm::QUOTE, "B"]
                         ],
-                        list![Symbol::QUOTE, "C"]
+                        list![SpecialForm::QUOTE, "C"]
                     ]
                 ]
                 .into(),
@@ -296,7 +291,10 @@ mod handle_lambda_tests {
     fn test_id_lambda() {
         let lambda_expr = list![Symbol::LAMBDA, list!["x"], "x"];
         assert_eq!(
-            handle_lambda(list![lambda_expr, list![Symbol::QUOTE, "A"]], NIL.into()),
+            handle_lambda(
+                list![lambda_expr, list![SpecialForm::QUOTE, "A"]],
+                NIL.into()
+            ),
             Some("A".into())
         );
     }
@@ -307,7 +305,11 @@ mod handle_lambda_tests {
 
         assert_eq!(
             handle_lambda(
-                list![lambda, list![Symbol::QUOTE, "A"], list![Symbol::QUOTE, "B"]],
+                list![
+                    lambda,
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
+                ],
                 NIL.into()
             ),
             Some("A".into())
@@ -316,7 +318,11 @@ mod handle_lambda_tests {
         let lambda = list![Symbol::LAMBDA, list!["x", "y"], "y"];
         assert_eq!(
             handle_lambda(
-                list![lambda, list![Symbol::QUOTE, "A"], list![Symbol::QUOTE, "B"]],
+                list![
+                    lambda,
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
+                ],
                 NIL.into()
             ),
             Some("B".into())
@@ -328,10 +334,13 @@ mod handle_lambda_tests {
             Symbol::LAMBDA,
             list!["x", "y"],
             list![
-                Symbol::COND,
+                SpecialForm::COND,
                 list![list![ElementaryFunction::EQ, "x", "y"], "x"],
                 list![list![ElementaryFunction::ATOM, "x"], "y"],
-                list![list![Symbol::QUOTE, T], list![ElementaryFunction::CAR, "x"]]
+                list![
+                    list![SpecialForm::QUOTE, T],
+                    list![ElementaryFunction::CAR, "x"]
+                ]
             ]
         ];
 
@@ -339,8 +348,8 @@ mod handle_lambda_tests {
             handle_lambda(
                 list![
                     lambda.clone(),
-                    list![Symbol::QUOTE, "A"],
-                    list![Symbol::QUOTE, "B"]
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
                 ],
                 NIL.into()
             ),
@@ -351,8 +360,8 @@ mod handle_lambda_tests {
             handle_lambda(
                 list![
                     lambda,
-                    list![Symbol::QUOTE, list!["A", "B"]],
-                    list![Symbol::QUOTE, "C"]
+                    list![SpecialForm::QUOTE, list!["A", "B"]],
+                    list![SpecialForm::QUOTE, "C"]
                 ],
                 NIL.into()
             ),
@@ -380,10 +389,10 @@ mod handle_label_tests {
                 Symbol::LAMBDA,
                 list!["x"],
                 list![
-                    Symbol::COND,
+                    SpecialForm::COND,
                     list![list![ElementaryFunction::ATOM, "x"], "x"],
                     list![
-                        list![Symbol::QUOTE, T],
+                        list![SpecialForm::QUOTE, T],
                         list!["ff", list![ElementaryFunction::CAR, "x"]]
                     ]
                 ]
@@ -391,13 +400,8 @@ mod handle_label_tests {
         ];
 
         assert_eq!(
-            handle_label(list![ff.clone(), list![Symbol::QUOTE, "A"]], NIL.into()),
-            Some("A".into())
-        );
-
-        assert_eq!(
             handle_label(
-                list![ff.clone(), list![Symbol::QUOTE, list!["A", "B"]]],
+                list![ff.clone(), list![SpecialForm::QUOTE, "A"]],
                 NIL.into()
             ),
             Some("A".into())
@@ -405,7 +409,15 @@ mod handle_label_tests {
 
         assert_eq!(
             handle_label(
-                list![ff, list![Symbol::QUOTE, list![list!["A", "B"], "C"]]],
+                list![ff.clone(), list![SpecialForm::QUOTE, list!["A", "B"]]],
+                NIL.into()
+            ),
+            Some("A".into())
+        );
+
+        assert_eq!(
+            handle_label(
+                list![ff, list![SpecialForm::QUOTE, list![list!["A", "B"], "C"]]],
                 NIL.into()
             ),
             Some("A".into())

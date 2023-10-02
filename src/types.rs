@@ -22,13 +22,45 @@ pub enum ElementaryFunction {
     ATOM,
 }
 
+use crate::interpreter::elementary_fns_glue::*;
+impl ElementaryFunction {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+        match self {
+            ElementaryFunction::ATOM => atom_fn(e_list, a),
+            ElementaryFunction::EQ => eq_fn(e_list, a),
+            ElementaryFunction::CAR => car_fn(e_list, a),
+            ElementaryFunction::CDR => cdr_fn(e_list, a),
+            ElementaryFunction::CONS => cons_fn(e_list, a),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum SpecialForm {
+    QUOTE,
+    COND,
+    AND,
+    OR,
+    PROG,
+}
+
+use crate::interpreter::keywords_glue::*;
+impl SpecialForm {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+        match self {
+            SpecialForm::QUOTE => handle_quote(e_list, a),
+            SpecialForm::COND => handle_cond(e_list, a),
+            _ => todo!(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Symbol {
     LAMBDA,
     LABEL,
-    QUOTE,
-    COND,
     ElementaryFunction(ElementaryFunction),
+    SpecialForm(SpecialForm),
     Other(String),
 }
 
@@ -37,18 +69,21 @@ impl From<ElementaryFunction> for Symbol {
         Symbol::ElementaryFunction(f)
     }
 }
+impl From<SpecialForm> for Symbol {
+    fn from(f: SpecialForm) -> Self {
+        Symbol::SpecialForm(f)
+    }
+}
 impl From<Bool> for Atom {
     fn from(b: Bool) -> Self {
         match b {
             Bool::T => Self::Bool(Bool::T),
             Bool::NIL => Self::Bool(Bool::NIL),
+            // Bool::NIL => Self::Bool(Bool::NIL),
         }
     }
 }
 
-// NOTE: this leads to HUGE confusion
-// consider using Symbol::Other and Atom::String directly
-// in places where the difference is crucial
 impl From<String> for Symbol {
     fn from(s: String) -> Self {
         Self::Other(s)
@@ -72,18 +107,16 @@ impl Display for Symbol {
 
 #[derive(Clone, PartialEq)]
 pub enum Atom {
-    Number(f64),
-    String(String),
     Symbol(Symbol),
+    Number(f64),
     Bool(Bool),
 }
 
 impl std::fmt::Debug for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Atom::Symbol(s) => f.write_fmt(format_args!("Symbol({})", s)),
+            Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(s) => f.write_fmt(format_args!("String({:?})", s)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
         }
     }
@@ -92,9 +125,8 @@ impl std::fmt::Debug for Atom {
 impl Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
+            Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
         }
     }

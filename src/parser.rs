@@ -2,7 +2,7 @@ use log::error;
 
 use crate::{
     elementary_functions::cons,
-    types::{Atom, ElementaryFunction, NullableList, SExpression, Symbol, NIL, T},
+    types::{Atom, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, NIL, T},
 };
 
 pub fn parse(s: &str) -> Option<SExpression> {
@@ -38,8 +38,8 @@ fn parse_atom(s: &str) -> Option<Atom> {
 
 fn parse_as_keyword(s: &str) -> Option<Atom> {
     match s.to_uppercase().as_str() {
-        "QUOTE" => Some(Symbol::QUOTE.into()),
-        "COND" => Some(Symbol::COND.into()),
+        "QUOTE" => Some(SpecialForm::QUOTE.into()),
+        "COND" => Some(SpecialForm::COND.into()),
         "LAMBDA" => Some(Symbol::LAMBDA.into()),
         "LABEL" => Some(Symbol::LABEL.into()),
 
@@ -72,7 +72,7 @@ fn parse_as_string(s: &str) -> Option<Atom> {
             error!("Missing a quote mark at the end of: {}", s);
             None
         },
-        |str| Some(Atom::String(str.to_string())),
+        |str| Some(Symbol::Other(str.to_string()).into()),
     )
 }
 
@@ -216,7 +216,7 @@ mod test_parser {
         );
         assert_eq!(parse("(eq)"), Some(list![ElementaryFunction::EQ].into()));
 
-        assert_eq!(parse("(cond)"), Some(list![Symbol::COND].into()));
+        assert_eq!(parse("(cond)"), Some(list![SpecialForm::COND].into()));
         assert_eq!(parse("(lambda)"), Some(list![Symbol::LAMBDA].into()));
         assert_eq!(parse("(label)"), Some(list![Symbol::LABEL].into()));
         assert_eq!(parse("(T)"), Some(list![T].into()));
@@ -237,7 +237,7 @@ mod test_parser {
             Some(
                 list![
                     ElementaryFunction::ATOM,
-                    list![Symbol::QUOTE, Symbol::Other("x".to_string())]
+                    list![SpecialForm::QUOTE, Symbol::Other("x".to_string())]
                 ]
                 .into()
             )
@@ -265,8 +265,8 @@ mod test_parser {
             Some(
                 list![
                     ElementaryFunction::CONS,
-                    list![Symbol::QUOTE, "A"],
-                    list![Symbol::QUOTE, "B"]
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
                 ]
                 .into()
             )
@@ -278,8 +278,8 @@ mod test_parser {
                     ElementaryFunction::CAR,
                     list![
                         ElementaryFunction::CONS,
-                        list![Symbol::QUOTE, "A"],
-                        list![Symbol::QUOTE, "B"]
+                        list![SpecialForm::QUOTE, "A"],
+                        list![SpecialForm::QUOTE, "B"]
                     ]
                 ]
                 .into()

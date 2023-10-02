@@ -52,6 +52,7 @@ pub(crate) fn cdr_fn(e_list: List, a: NullableList) -> Option<SExpression> {
         }
     }
 }
+
 pub(crate) fn cons_fn(e_list: List, a: NullableList) -> Option<SExpression> {
     match cdr(e_list.clone()) {
         SExpression::List(arguments) => Some(
@@ -76,6 +77,7 @@ pub(crate) fn cons_fn(e_list: List, a: NullableList) -> Option<SExpression> {
         }
     }
 }
+
 pub(crate) fn eq_fn(e_list: List, a: NullableList) -> Option<SExpression> {
     match cdr(e_list.clone()) {
         SExpression::List(arguments) => Some(
@@ -99,12 +101,3 @@ pub(crate) fn eq_fn(e_list: List, a: NullableList) -> Option<SExpression> {
         }
     }
 }
-
-pub type EvalFn = fn(List, NullableList) -> Option<SExpression>;
-pub static BUILTIN_FUNCS: phf::Map<&'static str, EvalFn> = phf::phf_map! {
-    "ATOM" => atom_fn,
-    "CAR" => car_fn,
-    "CDR" => cdr_fn,
-    "CONS" => cons_fn,
-    "EQ" => eq_fn
-};
