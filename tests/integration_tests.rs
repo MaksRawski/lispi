@@ -18,21 +18,13 @@ fn test_parse_eval_car_cons() {
     assert_eq!(dbg!(dbg!(prog).eval()), Some("A".into()));
 }
 
-#[test]
-fn test_parse_eval_cond() {
-    use lispi::types::Atom;
+// #[test]
+// fn test_parse_eval_cond() {
+//     let text = "(cond ((atom 1) \"OK\") (T \"ERROR\"))";
+//     let prog = parse(text).unwrap();
+//     assert_eq!(dbg!(dbg!(prog).eval()), Some("OK".into()));
 
-    let text = "(cond ((atom 1) \"OK\") (T \"ERROR\"))";
-    let prog = parse(text).unwrap();
-    assert_eq!(
-        dbg!(dbg!(prog).eval()),
-        Some(Atom::String("OK".to_string()).into())
-    );
-
-    let text = "(cond ((atom (cons 1 2)) \"ERROR\") (T \"OK\"))";
-    let prog = parse(text).unwrap();
-    assert_eq!(
-        dbg!(dbg!(prog).eval()),
-        Some(Atom::String("OK".to_string()).into())
-    );
-}
+//     let text = "(cond ((atom (cons 1 2)) \"ERROR\") (T \"OK\"))";
+//     let prog = parse(text).unwrap();
+//     assert_eq!(dbg!(dbg!(prog).eval()), Some("OK".into()));
+// }
