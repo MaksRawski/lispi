@@ -27,6 +27,7 @@ where
 #[test]
 fn test_atom() {
     assert!(atom(T.into()));
+    assert!(atom(F.into()));
     assert!(atom(NIL.into()));
     assert!(!atom(SExpression::List(List::new(T.into(), T.into()))));
 }

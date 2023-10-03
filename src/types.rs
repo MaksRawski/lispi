@@ -8,10 +8,11 @@ use crate::{
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Bool {
     T,
-    NIL,
+    F,
 }
 pub const T: Bool = Bool::T;
-pub const NIL: Bool = Bool::NIL;
+pub const F: Bool = Bool::F;
+pub const NIL: Atom = Atom::NIL;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ElementaryFunction {
@@ -76,11 +77,7 @@ impl From<SpecialForm> for Symbol {
 }
 impl From<Bool> for Atom {
     fn from(b: Bool) -> Self {
-        match b {
-            Bool::T => Self::Bool(Bool::T),
-            Bool::NIL => Self::Bool(Bool::NIL),
-            // Bool::NIL => Self::Bool(Bool::NIL),
-        }
+        Self::Bool(b)
     }
 }
 
@@ -110,6 +107,7 @@ pub enum Atom {
     Symbol(Symbol),
     Number(f64),
     Bool(Bool),
+    NIL,
 }
 
 impl std::fmt::Debug for Atom {
@@ -118,6 +116,7 @@ impl std::fmt::Debug for Atom {
             Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+            Atom::NIL => f.write_fmt(format_args!("NIL")),
         }
     }
 }
@@ -128,6 +127,7 @@ impl Display for Atom {
             Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+            Atom::NIL => f.write_fmt(format_args!("NIL")),
         }
     }
 }
@@ -136,7 +136,7 @@ impl From<bool> for Atom {
     fn from(value: bool) -> Self {
         match value {
             true => T.into(),
-            false => NIL.into(),
+            false => F.into(),
         }
     }
 }
@@ -330,11 +330,11 @@ impl From<List> for NullableList {
     }
 }
 
-impl From<Bool> for NullableList {
-    fn from(b: Bool) -> Self {
-        match b {
-            Bool::NIL => Self::NIL,
-            Bool::T => panic!("Tried to convert T into a NullableList!"),
+impl From<Atom> for NullableList {
+    fn from(atom: Atom) -> Self {
+        match atom {
+            Atom::NIL => Self::NIL,
+            _ => panic!("Tried to convert {} into a NullableList", atom),
         }
     }
 }

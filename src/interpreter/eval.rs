@@ -42,15 +42,11 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
                     log::error!("Invalid use of LABEL: {}", e_list);
                     None
                 }
-                Atom::Number(n) => {
-                    log::error!("Tried to use {n} like a function: {}", e_list);
-                    None
-                }
-                Atom::Bool(b) => {
-                    log::error!("Tried to use {b:?} like a function: {}", e_list);
-                    None
-                }
                 Atom::Symbol(Symbol::Other(s)) => handle_other_symbol(s, e_list, a),
+                _ => {
+                    log::error!("Tried to use {} like a function", e_list);
+                    None
+                }
             },
             SExpression::List(compound_func) => match car(compound_func.clone()) {
                 SExpression::Atom(Atom::Symbol(Symbol::LABEL)) => handle_label(e_list, a),
@@ -110,7 +106,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
 #[cfg(test)]
 mod elementary_functions_tests {
     use crate::list_macros::list;
-    use crate::types::T;
+    use crate::types::{F, T};
 
     use super::*;
 
@@ -196,7 +192,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(NIL.into())
+            Some(F.into())
         );
         assert_eq!(
             eval(
@@ -221,14 +217,14 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(NIL.into())
+            Some(F.into())
         );
         assert_eq!(
             eval(
                 list![ElementaryFunction::ATOM, "x"].into(),
                 list![cons("x", list![1, 2, 3])].into()
             ),
-            Some(NIL.into())
+            Some(F.into())
         );
     }
     #[test]
