@@ -1,6 +1,7 @@
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::cell::Cell;
 
+use rustyline::hint::HistoryHinter;
 use rustyline::{
     highlight::Highlighter, validate::MatchingBracketValidator, Completer, Helper, Highlighter,
     Hinter, Validator,
@@ -12,6 +13,8 @@ pub struct MyHelper {
     brackets: MatchingBracketValidator,
     #[rustyline(Highlighter)]
     highlighter: MyMatchingBracketHighlighter,
+    #[rustyline(Hinter)]
+    hinter: HistoryHinter,
 }
 
 impl MyHelper {
@@ -19,6 +22,7 @@ impl MyHelper {
         Self {
             brackets: MatchingBracketValidator::new(),
             highlighter: MyMatchingBracketHighlighter::new(),
+            hinter: HistoryHinter {},
         }
     }
 }
