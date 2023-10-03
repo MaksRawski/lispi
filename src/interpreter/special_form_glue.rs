@@ -67,22 +67,27 @@ pub(crate) fn handle_lambda(e: List, a: NullableList) -> Option<SExpression> {
 
 /// utility function for the monstrocity that is `eval`
 pub(crate) fn handle_label(e: List, a: NullableList) -> Option<SExpression> {
-    // the entire e is of the form: ((LABEL, function_name, expression), args)
+    // the entire e is of the form: ((LABEL, name, definition), args)
     let function_name: String = match compose_car_cdr("cadar", e.clone()) {
         Some(SExpression::Atom(Atom::Symbol(Symbol::Other(s)))) => s,
-        _ => {
-            log::error!("Second argument of LABEL should be a string: {}", e);
-            return None;
-        }
+        _ => match compose_car_cdr("cadr", e.clone()) {
+            Some(SExpression::Atom(Atom::Symbol(Symbol::Other(s)))) => s,
+            _ => {
+                log::error!("Second argument of LABEL should be a name: {}", e);
+                return None;
+            }
+        },
     };
 
     let expression = match compose_car_cdr("caddar", e.clone()) {
-        Some(SExpression::Atom(_)) => todo!("Do we allow expressions to be atoms?"),
         Some(expr) => expr,
-        None => {
-            log::error!("LABEL is missing an associated expression: {}", e);
-            return None;
-        }
+        None => match compose_car_cdr("caddr", e.clone()) {
+            Some(expr) => expr,
+            None => {
+                log::error!("LABEL is missing a definition: {}", e);
+                return None;
+            }
+        },
     };
     let args = cdr(e.clone());
 
@@ -112,11 +117,43 @@ pub(crate) fn handle_cond(e_list: List, a: NullableList) -> Option<SExpression> 
         }
     }
 }
-pub(crate) fn handle_unknown_symbol(
-    s: String,
-    e_list: List,
-    a: NullableList,
-) -> Option<SExpression> {
+
+/// The arguments of and are evaluated in sequence, from left to right,
+/// until one is found that is false, or until the end of the list is reached.
+/// The value of and is false or true respectively.
+pub(crate) fn handle_and(e_list: List, a: NullableList) -> Option<SExpression> {
+    let h = eval(car(e_list.clone()), a.clone())?;
+
+    if h == F.into() {
+        Some(F.into())
+    } else {
+        match cdr(e_list) {
+            SExpression::Atom(t) => Some((t != F.into()).into()),
+            SExpression::List(l) => handle_and(l, a),
+        }
+    }
+}
+
+/// The arguments of and are evaluated in sequence, from left to right,
+/// until one is found that is false, or until the end of the list is reached.
+/// The value of and is false or true respectively.
+pub(crate) fn handle_or(e_list: List, a: NullableList) -> Option<SExpression> {
+    let h = eval(car(e_list.clone()), a.clone())?;
+
+    if h == T.into() {
+        Some(T.into())
+    } else {
+        match cdr(e_list) {
+            SExpression::Atom(t) => Some((t == T.into()).into()),
+            SExpression::List(l) => handle_or(l, a),
+        }
+    }
+}
+
+/// this function is called basically whenever the symbol is not an elementary function
+/// TODO: check if the symbol is defined using SUBR or EXPR, otherwise check `a`
+/// (which is the only thing that it's doing now)
+pub(crate) fn handle_other_symbol(s: String, e_list: List, a: NullableList) -> Option<SExpression> {
     match a.clone() {
         NullableList::List(a_list) => match cdr(e_list) {
             SExpression::Atom(argument) => eval(
@@ -202,4 +239,12 @@ fn evlis(m: NullableList, a: NullableList) -> Option<NullableList> {
         },
         NullableList::NIL => Some(NIL.into()),
     }
+}
+
+#[test]
+fn test_and() {
+    use crate::list;
+    assert_eq!(handle_and(list![T, T, T], NIL.into()), Some(true.into()));
+    assert_eq!(handle_and(list![T, T, F], NIL.into()), Some(false.into()));
+    assert_eq!(handle_and(list![1, 2, 3], NIL.into()), Some(true.into()));
 }

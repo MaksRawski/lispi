@@ -1,10 +1,10 @@
 use crate::{
     elementary_functions::{car, cdr},
     list_functions::assoc_v,
-    types::{Atom, NullableList, SExpression, SpecialForm, Symbol, NIL},
+    types::{Atom, NullableList, SExpression, Symbol, NIL},
 };
 
-use super::keywords_glue::*;
+use super::special_form_glue::*;
 
 // /// The universal lisp function AKA the interpreter:
 // /// applies a function f to a list of arguments x
@@ -37,11 +37,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
             SExpression::Atom(car_e) => match car_e {
                 Atom::Symbol(Symbol::SpecialForm(s)) => s.eval(e_list, a),
                 Atom::Symbol(Symbol::ElementaryFunction(f)) => f.eval(e_list, a),
-                Atom::Symbol(Symbol::LAMBDA) => Some(e_list.into()),
-                Atom::Symbol(Symbol::LABEL) => {
-                    log::error!("Invalid use of LABEL: {}", e_list);
-                    None
-                }
+                Atom::Symbol(Symbol::BuiltinFunc(f)) => f.eval(e_list, a),
                 Atom::Symbol(Symbol::Other(s)) => handle_other_symbol(s, e_list, a),
                 _ => {
                     log::error!("Tried to use {} like a function", e_list);
@@ -49,11 +45,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
                 }
             },
             SExpression::List(compound_func) => match car(compound_func.clone()) {
-                SExpression::Atom(Atom::Symbol(Symbol::LABEL)) => handle_label(e_list, a),
-                SExpression::Atom(Atom::Symbol(Symbol::LAMBDA)) => handle_lambda(e_list, a),
-                SExpression::Atom(Atom::Symbol(Symbol::SpecialForm(SpecialForm::QUOTE))) => {
-                    Some(cdr(compound_func))
-                }
+                SExpression::Atom(Atom::Symbol(Symbol::SpecialForm(sf))) => sf.eval(e_list, a),
                 SExpression::Atom(Atom::Number(_)) => {
                     log::error!("Tried to use a number as a function: {}", e_list);
                     None
@@ -62,7 +54,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
                     if cdr(e_list.clone()) == NIL.into() {
                         eval(compound_func.into(), a)
                     } else {
-                        log::error!("Tried to use {f} like LABEL or LAMBDA: {}", e_list);
+                        log::error!("Tried to use {f} like special form: {}", e_list);
                         None
                     }
                 }
@@ -285,7 +277,7 @@ mod handle_lambda_tests {
 
     #[test]
     fn test_id_lambda() {
-        let lambda_expr = list![Symbol::LAMBDA, list!["x"], "x"];
+        let lambda_expr = list![SpecialForm::LAMBDA, list!["x"], "x"];
         assert_eq!(
             handle_lambda(
                 list![lambda_expr, list![SpecialForm::QUOTE, "A"]],
@@ -297,7 +289,7 @@ mod handle_lambda_tests {
 
     #[test]
     fn test_binds_lambda() {
-        let lambda = list![Symbol::LAMBDA, list!["x", "y"], "x"];
+        let lambda = list![SpecialForm::LAMBDA, list!["x", "y"], "x"];
 
         assert_eq!(
             handle_lambda(
@@ -311,7 +303,7 @@ mod handle_lambda_tests {
             Some("A".into())
         );
 
-        let lambda = list![Symbol::LAMBDA, list!["x", "y"], "y"];
+        let lambda = list![SpecialForm::LAMBDA, list!["x", "y"], "y"];
         assert_eq!(
             handle_lambda(
                 list![
@@ -327,7 +319,7 @@ mod handle_lambda_tests {
     #[test]
     fn test_cond_lambda() {
         let lambda = list![
-            Symbol::LAMBDA,
+            SpecialForm::LAMBDA,
             list!["x", "y"],
             list![
                 SpecialForm::COND,
@@ -379,10 +371,10 @@ mod handle_label_tests {
         //       ((atom x) x)
         //       ('T (FF (car x))))))
         let ff = list![
-            Symbol::LABEL,
+            SpecialForm::LABEL,
             "ff",
             list![
-                Symbol::LAMBDA,
+                SpecialForm::LAMBDA,
                 list!["x"],
                 list![
                     SpecialForm::COND,
@@ -418,5 +410,19 @@ mod handle_label_tests {
             ),
             Some("A".into())
         );
+    }
+}
+
+#[cfg(test)]
+mod invalid_sexps_tests {
+    use super::*;
+    use crate::list;
+
+    #[test]
+    fn test_atom_as_func() {
+        assert_eq!(eval(list![list![1]].into(), NIL.into()), None);
+        assert_eq!(eval(list![list![T]].into(), NIL.into()), None);
+        assert_eq!(eval(list![list![NIL]].into(), NIL.into()), None);
+        assert_eq!(eval(list![list![1, 2]].into(), NIL.into()), None);
     }
 }

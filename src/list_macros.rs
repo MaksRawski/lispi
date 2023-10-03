@@ -85,17 +85,6 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     if let SExpression::List(l) = next_list {
         compose_car_cdr(&next_composition, l)
     } else {
-        // we can't just panic here because this function will be called with
-        // user provided input so when this function fails user should be provided
-        // with a message appropriate to the situation
-        //
-        // those 2 lines below are just for deubgging purposes and probably
-        // could (and should) be removed if all uses of this function
-        // throught this crate have descriptive messages
-
-        eprintln!("Can't {} atomic: {}", next_composition, next_list);
-        dbg!(car_cdr_composition, list);
-
         None
     }
 }

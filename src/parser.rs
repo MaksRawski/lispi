@@ -2,7 +2,10 @@ use log::error;
 
 use crate::{
     elementary_functions::cons,
-    types::{Atom, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, NIL, T},
+    types::{
+        Atom, BuiltinFunc, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, NIL,
+        T,
+    },
 };
 
 pub fn parse(s: &str) -> Option<SExpression> {
@@ -26,8 +29,9 @@ fn check_parenthesis(s: &str) -> bool {
 }
 
 fn find_invalid_token(s: &str) -> Option<char> {
-    s.chars()
-        .find(|c| !c.is_ascii_alphanumeric() && !['.', '(', ')', ' ', '\t', '\n', '\r'].contains(c))
+    s.chars().find(|c| {
+        !c.is_ascii_alphanumeric() && !['.', '(', ')', ' ', '-', '+', '\t', '\n', '\r'].contains(c)
+    })
 }
 
 fn parse_atom(s: &str) -> Option<Atom> {
@@ -40,14 +44,27 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
     match s.to_uppercase().as_str() {
         "QUOTE" => Some(SpecialForm::QUOTE.into()),
         "COND" => Some(SpecialForm::COND.into()),
-        "LAMBDA" => Some(Symbol::LAMBDA.into()),
-        "LABEL" => Some(Symbol::LABEL.into()),
+        "LAMBDA" => Some(SpecialForm::LAMBDA.into()),
+        "LABEL" => Some(SpecialForm::LABEL.into()),
 
         "ATOM" => Some(ElementaryFunction::ATOM.into()),
         "CAR" => Some(ElementaryFunction::CAR.into()),
         "CDR" => Some(ElementaryFunction::CDR.into()),
         "CONS" => Some(ElementaryFunction::CONS.into()),
         "EQ" => Some(ElementaryFunction::EQ.into()),
+
+        "EQUAL" => Some(BuiltinFunc::EQUAL.into()),
+        "SUM" => Some(BuiltinFunc::SUM.into()),
+        "PRDCT" => Some(BuiltinFunc::PRDCT.into()),
+        "EQ1" => Some(BuiltinFunc::EQ1.into()),
+        "LIST" => Some(BuiltinFunc::LIST.into()),
+        "APPEND" => Some(BuiltinFunc::APPEND.into()),
+        "SUBST" => Some(BuiltinFunc::SUBST.into()),
+        "SUBLIS" => Some(BuiltinFunc::SUBLIS.into()),
+        "SASSOC" => Some(BuiltinFunc::SASSOC.into()),
+        "EXPT" => Some(BuiltinFunc::EXPT.into()),
+        "SELECT" => Some(BuiltinFunc::SELECT.into()),
+        "CONC" => Some(BuiltinFunc::CONC.into()),
 
         "T" => Some(T.into()),
         "NIL" => Some(NIL.into()),
@@ -217,8 +234,8 @@ mod test_parser {
         assert_eq!(parse("(eq)"), Some(list![ElementaryFunction::EQ].into()));
 
         assert_eq!(parse("(cond)"), Some(list![SpecialForm::COND].into()));
-        assert_eq!(parse("(lambda)"), Some(list![Symbol::LAMBDA].into()));
-        assert_eq!(parse("(label)"), Some(list![Symbol::LABEL].into()));
+        assert_eq!(parse("(lambda)"), Some(list![SpecialForm::LAMBDA].into()));
+        assert_eq!(parse("(label)"), Some(list![SpecialForm::LABEL].into()));
         assert_eq!(parse("(T)"), Some(list![T].into()));
         assert_eq!(parse("(NIL)"), Some(list![NIL].into()));
     }

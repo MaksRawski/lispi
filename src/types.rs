@@ -14,6 +14,8 @@ pub const T: Bool = Bool::T;
 pub const F: Bool = Bool::F;
 pub const NIL: Atom = Atom::NIL;
 
+// TODO: let's keep those since those *really* are elementary
+// for those that are `define`d using sexps we'll do sth else
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ElementaryFunction {
     CAR,
@@ -43,25 +45,68 @@ pub enum SpecialForm {
     AND,
     OR,
     PROG,
+    LABEL,
+    LAMBDA,
 }
 
-use crate::interpreter::keywords_glue::*;
+use crate::interpreter::special_form_glue::*;
 impl SpecialForm {
     pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
         match self {
             SpecialForm::QUOTE => handle_quote(e_list, a),
             SpecialForm::COND => handle_cond(e_list, a),
-            _ => todo!(),
+            SpecialForm::AND => handle_and(e_list, a),
+            SpecialForm::OR => handle_or(e_list, a),
+            SpecialForm::LABEL => handle_label(e_list, a),
+            SpecialForm::LAMBDA => handle_lambda(e_list, a),
+            SpecialForm::PROG => todo!(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BuiltinFunc {
+    EQUAL,
+    EQ1,
+    ATTRIB, // NOTE: define is better so this has low priority
+    LIST,
+    APPEND,
+    SUBST,
+    SUBLIS,
+    SASSOC,
+    SUM,
+    PRDCT,
+    EXPT,
+    SELECT, // assoc_v
+    CONC,   // technically a special form
+}
+
+use crate::interpreter::other_fns_glue::*;
+impl BuiltinFunc {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+        match self {
+            BuiltinFunc::SUM => sum_fn(e_list, a),
+            BuiltinFunc::PRDCT => prdct_fn(e_list, a),
+            BuiltinFunc::EXPT => todo!(),
+            BuiltinFunc::EQUAL => equal_fn(e_list, a),
+            BuiltinFunc::EQ1 => todo!(),
+            BuiltinFunc::ATTRIB => todo!(),
+            BuiltinFunc::LIST => todo!(),
+            BuiltinFunc::APPEND => todo!(),
+            BuiltinFunc::SUBST => todo!(),
+            BuiltinFunc::SUBLIS => todo!(),
+            BuiltinFunc::SASSOC => todo!(),
+            BuiltinFunc::SELECT => todo!(),
+            BuiltinFunc::CONC => todo!(),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Symbol {
-    LAMBDA,
-    LABEL,
     ElementaryFunction(ElementaryFunction),
     SpecialForm(SpecialForm),
+    BuiltinFunc(BuiltinFunc),
     Other(String),
 }
 
@@ -75,6 +120,12 @@ impl From<SpecialForm> for Symbol {
         Symbol::SpecialForm(f)
     }
 }
+impl From<BuiltinFunc> for Symbol {
+    fn from(f: BuiltinFunc) -> Self {
+        Symbol::BuiltinFunc(f)
+    }
+}
+
 impl From<Bool> for Atom {
     fn from(b: Bool) -> Self {
         Self::Bool(b)
@@ -97,7 +148,8 @@ impl Display for Symbol {
         match self {
             Symbol::Other(s) => f.write_fmt(format_args!("{}", s)),
             Symbol::ElementaryFunction(e) => f.write_fmt(format_args!("{:?}", e)),
-            _ => f.write_fmt(format_args!("{:?}", self)),
+            Symbol::SpecialForm(sf) => f.write_fmt(format_args!("{:?}", sf)),
+            Symbol::BuiltinFunc(bf) => f.write_fmt(format_args!("{:?}", bf)),
         }
     }
 }
@@ -124,7 +176,7 @@ impl std::fmt::Debug for Atom {
 impl Display for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
+            Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
             Atom::NIL => f.write_fmt(format_args!("NIL")),
