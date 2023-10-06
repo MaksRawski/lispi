@@ -285,3 +285,11 @@ fn test_and() {
     assert_eq!(handle_and(list![T, T, F], NIL.into()), Some(false.into()));
     assert_eq!(handle_and(list![1, 2, 3], NIL.into()), Some(true.into()));
 }
+
+#[test]
+fn test_or() {
+    use crate::list;
+    assert_eq!(handle_or(list![F, F, T], NIL.into()), Some(true.into()));
+    assert_eq!(handle_or(list![F, F, F], NIL.into()), Some(false.into()));
+    assert_eq!(handle_or(list![1, 2, 3], NIL.into()), Some(false.into()));
+}
