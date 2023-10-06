@@ -220,7 +220,7 @@ fn evcon(c: List, a: NullableList) -> Option<SExpression> {
         match cdr(c.clone()) {
             SExpression::List(l) => evcon(l, a),
             SExpression::Atom(cdr_c) => {
-                if cdr_c == NIL.into() {
+                if cdr_c == NIL {
                     log::info!("All clauses failed in: {}", c);
                     Some(NIL.into())
                 } else {

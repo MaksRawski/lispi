@@ -75,9 +75,9 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     );
 
     let next_list = if car_cdr_composition.ends_with("ar") {
-        car(list.clone())
+        car(list)
     } else if car_cdr_composition.ends_with("dr") {
-        cdr(list.clone())
+        cdr(list)
     } else {
         panic!("invalid composition: {}", car_cdr_composition);
     };

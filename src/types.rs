@@ -275,7 +275,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
     match car(l.clone()) {
         SExpression::Atom(car_l) => match cdr(l.clone()) {
             SExpression::Atom(cdr_l) => {
-                if cdr_l == NIL.into() {
+                if cdr_l == NIL {
                     if is_cdr {
                         format!("{car_l}")
                     } else {
@@ -297,7 +297,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
         },
         SExpression::List(car_l) => match cdr(l.clone()) {
             SExpression::Atom(cdr_l) => {
-                if cdr_l == NIL.into() {
+                if cdr_l == NIL {
                     if is_cdr {
                         display_list(&car_l, false)
                     } else {
@@ -336,7 +336,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
 /// it's not a list because the right-most element is not NIL
 fn is_cons(l: &List) -> bool {
     match cdr(l.clone()) {
-        SExpression::Atom(a) => a != NIL.into(),
+        SExpression::Atom(a) => a != NIL,
         SExpression::List(cdr_l) => is_cons(&cdr_l),
     }
 }
