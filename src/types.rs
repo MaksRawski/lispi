@@ -27,13 +27,13 @@ pub enum ElementaryFunction {
 
 use crate::interpreter::elementary_fns_glue::*;
 impl ElementaryFunction {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
         match self {
-            ElementaryFunction::ATOM => atom_fn(e_list, a),
-            ElementaryFunction::EQ => eq_fn(e_list, a),
-            ElementaryFunction::CAR => car_fn(e_list, a),
-            ElementaryFunction::CDR => cdr_fn(e_list, a),
-            ElementaryFunction::CONS => cons_fn(e_list, a),
+            ElementaryFunction::ATOM => atom_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::EQ => eq_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CAR => car_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CDR => cdr_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CONS => cons_fn(e_list, a.clone()).map(|e| (e, a)),
         }
     }
 }
@@ -51,14 +51,14 @@ pub enum SpecialForm {
 
 use crate::interpreter::special_form_glue::*;
 impl SpecialForm {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
         match self {
-            SpecialForm::QUOTE => handle_quote(e_list, a),
-            SpecialForm::COND => handle_cond(e_list, a),
-            SpecialForm::AND => handle_and(e_list, a),
-            SpecialForm::OR => handle_or(e_list, a),
-            SpecialForm::LABEL => handle_label(e_list, a),
-            SpecialForm::LAMBDA => handle_lambda(e_list, a),
+            SpecialForm::QUOTE => handle_quote(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::COND => handle_cond(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::AND => handle_and(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::OR => handle_or(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::LABEL => handle_label(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::LAMBDA => handle_lambda(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::PROG => todo!(),
         }
     }
@@ -83,12 +83,12 @@ pub enum BuiltinFunc {
 
 use crate::interpreter::other_fns_glue::*;
 impl BuiltinFunc {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<SExpression> {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
         match self {
-            BuiltinFunc::SUM => sum_fn(e_list, a),
-            BuiltinFunc::PRDCT => prdct_fn(e_list, a),
+            BuiltinFunc::SUM => sum_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::PRDCT => prdct_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::EQUAL => equal_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EXPT => todo!(),
-            BuiltinFunc::EQUAL => equal_fn(e_list, a),
             BuiltinFunc::EQ1 => todo!(),
             BuiltinFunc::ATTRIB => todo!(),
             BuiltinFunc::LIST => todo!(),
@@ -413,8 +413,8 @@ impl Display for SExpression {
 }
 
 impl SExpression {
-    pub fn eval(self) -> Option<SExpression> {
-        eval(self, NIL.into())
+    pub fn eval(self, a: NullableList) -> Option<SExpression> {
+        eval(self, a).map(|(e, _a)| e)
     }
 }
 

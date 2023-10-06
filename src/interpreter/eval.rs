@@ -24,14 +24,18 @@ use super::special_form_glue::*;
 //     }
 // }
 
-/// evaluates an expression using association list `a`
-pub fn eval(e: SExpression, a: NullableList) -> Option<SExpression> {
+// TODO: use Cow here for the returned `a`
+/// evaluates an expression using association list `a` and returns the S-expression
+/// and the new association list if `e` was evaluated succesfully
+pub fn eval(e: SExpression, a: NullableList) -> Option<(SExpression, NullableList)> {
+    // dbg!(&e);
     match e {
-        SExpression::Atom(e_atom) => match a {
-            NullableList::List(a_list) => {
-                Some(assoc_v(e_atom.clone(), a_list).unwrap_or(e_atom.into()))
-            }
-            NullableList::NIL => Some(e_atom.into()),
+        SExpression::Atom(e_atom) => match a.clone() {
+            NullableList::List(a_list) => assoc_v(e_atom.clone(), a_list).map_or_else(
+                || Some((e_atom.into(), a.clone())),
+                |e| Some((e, a.clone())),
+            ),
+            NullableList::NIL => Some((e_atom.into(), a)),
         },
         SExpression::List(e_list) => match car(e_list.clone()) {
             SExpression::Atom(car_e) => match car_e {
@@ -114,7 +118,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some("A".into())
+            Some(("A".into(), NIL.into()))
         )
     }
     #[test]
@@ -129,7 +133,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(list!["B"].into())
+            Some((list!["B"].into(), NIL.into()))
         )
     }
     #[test]
@@ -144,7 +148,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(list!["A", "B"].into())
+            Some((list!["A", "B"].into(), NIL.into()))
         );
         // (cons (cons 'A 'B) 'C) => (('A 'B) 'C)
         assert_eq!(
@@ -157,7 +161,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(list![list!["A", "B"], "C"].into())
+            Some((list![list!["A", "B"], "C"].into(), NIL.into()))
         );
     }
     #[test]
@@ -172,7 +176,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(T.into())
+            Some((T.into(), NIL.into()))
         );
         assert_eq!(
             eval(
@@ -184,21 +188,19 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(F.into())
+            Some((F.into(), NIL.into()))
         );
+        let a: NullableList = list![cons("x", 1), cons("y", 1)].into();
         assert_eq!(
-            eval(
-                list![ElementaryFunction::EQ, "x", "y"].into(),
-                list![cons("x", 1), cons("y", 1)].into()
-            ),
-            Some(T.into())
+            eval(list![ElementaryFunction::EQ, "x", "y"].into(), a.clone()),
+            Some((T.into(), a))
         );
     }
     #[test]
     fn test_eval_atom() {
         assert_eq!(
             eval(list![ElementaryFunction::ATOM, "x"].into(), NIL.into()),
-            Some(T.into())
+            Some((T.into(), NIL.into()))
         );
         assert_eq!(
             eval(
@@ -209,14 +211,12 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(F.into())
+            Some((F.into(), NIL.into()))
         );
+        let a: NullableList = list![cons("x", list![1, 2, 3])].into();
         assert_eq!(
-            eval(
-                list![ElementaryFunction::ATOM, "x"].into(),
-                list![cons("x", list![1, 2, 3])].into()
-            ),
-            Some(F.into())
+            eval(list![ElementaryFunction::ATOM, "x"].into(), a.clone()),
+            Some((F.into(), a))
         );
     }
     #[test]
@@ -230,7 +230,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(1.into())
+            Some((1.into(), NIL.into()))
         );
         assert_eq!(
             eval(
@@ -245,7 +245,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some("A".into())
+            Some(("A".into(), NIL.into()))
         );
         assert_eq!(
             eval(
@@ -264,7 +264,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some(list!["A", "B"].into())
+            Some((list!["A", "B"].into(), NIL.into()))
         );
     }
 }
