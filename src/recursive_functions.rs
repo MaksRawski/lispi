@@ -19,12 +19,10 @@ pub fn subst(x: SExpression, y: Atom, z: SExpression) -> SExpression {
                 z
             }
         }
-        SExpression::List(l) => {
-            SExpression::List(cons(
-                subst(x.clone(), y.clone(), car(l.clone())),
-                subst(x, y, cdr(l)),
-            ))
-        }
+        SExpression::List(l) => SExpression::List(cons(
+            subst(x.clone(), y.clone(), car(l.clone())),
+            subst(x, y, cdr(l)),
+        )),
     }
 }
 
@@ -47,7 +45,7 @@ pub fn equal(x: SExpression, y: SExpression) -> bool {
 /// predicate which checks if S-Expression is NIL
 pub fn null(x: SExpression) -> bool {
     match x {
-        SExpression::Atom(a) => eq(a, NIL.into()),
+        SExpression::Atom(a) => eq(a, NIL),
         SExpression::List(_) => false,
     }
 }

@@ -8,11 +8,14 @@ use crate::{
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Bool {
     T,
-    NIL,
+    F,
 }
 pub const T: Bool = Bool::T;
-pub const NIL: Bool = Bool::NIL;
+pub const F: Bool = Bool::F;
+pub const NIL: Atom = Atom::NIL;
 
+// TODO: let's keep those since those *really* are elementary
+// for those that are `define`d using sexps we'll do sth else
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ElementaryFunction {
     CAR,
@@ -22,13 +25,90 @@ pub enum ElementaryFunction {
     ATOM,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Symbol {
-    LAMBDA,
-    LABEL,
+use crate::interpreter::elementary_fns_glue::*;
+impl ElementaryFunction {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+        match self {
+            ElementaryFunction::ATOM => atom_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::EQ => eq_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CAR => car_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CDR => cdr_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CONS => cons_fn(e_list, a.clone()).map(|e| (e, a)),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum SpecialForm {
     QUOTE,
     COND,
+    AND,
+    OR,
+    PROG,
+    LABEL,
+    LAMBDA,
+    DEFINE,
+}
+
+use crate::interpreter::special_form_glue::*;
+impl SpecialForm {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+        match self {
+            SpecialForm::QUOTE => handle_quote(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::COND => handle_cond(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::AND => handle_and(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::OR => handle_or(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::LABEL => handle_label(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::LAMBDA => handle_lambda(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::DEFINE => define_fn(e_list, a).map(|a| (NIL.into(), a.into())),
+            SpecialForm::PROG => todo!(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BuiltinFunc {
+    EQUAL,
+    EQ1,
+    ATTRIB, // NOTE: define is better so this has low priority
+    LIST,
+    APPEND,
+    SUBST,
+    SUBLIS,
+    SASSOC,
+    SUM,
+    PRDCT,
+    EXPT,
+    SELECT, // assoc_v
+    CONC,   // technically a special form
+}
+
+use crate::interpreter::other_fns_glue::*;
+impl BuiltinFunc {
+    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+        match self {
+            BuiltinFunc::SUM => sum_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::PRDCT => prdct_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::EQUAL => equal_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::EXPT => todo!(),
+            BuiltinFunc::EQ1 => todo!(),
+            BuiltinFunc::ATTRIB => todo!(),
+            BuiltinFunc::LIST => todo!(),
+            BuiltinFunc::APPEND => todo!(),
+            BuiltinFunc::SUBST => todo!(),
+            BuiltinFunc::SUBLIS => todo!(),
+            BuiltinFunc::SASSOC => todo!(),
+            BuiltinFunc::SELECT => todo!(),
+            BuiltinFunc::CONC => todo!(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Symbol {
     ElementaryFunction(ElementaryFunction),
+    SpecialForm(SpecialForm),
+    BuiltinFunc(BuiltinFunc),
     Other(String),
 }
 
@@ -37,18 +117,23 @@ impl From<ElementaryFunction> for Symbol {
         Symbol::ElementaryFunction(f)
     }
 }
-impl From<Bool> for Atom {
-    fn from(b: Bool) -> Self {
-        match b {
-            Bool::T => Self::Bool(Bool::T),
-            Bool::NIL => Self::Bool(Bool::NIL),
-        }
+impl From<SpecialForm> for Symbol {
+    fn from(f: SpecialForm) -> Self {
+        Symbol::SpecialForm(f)
+    }
+}
+impl From<BuiltinFunc> for Symbol {
+    fn from(f: BuiltinFunc) -> Self {
+        Symbol::BuiltinFunc(f)
     }
 }
 
-// NOTE: this leads to HUGE confusion
-// consider using Symbol::Other and Atom::String directly
-// in places where the difference is crucial
+impl From<Bool> for Atom {
+    fn from(b: Bool) -> Self {
+        Self::Bool(b)
+    }
+}
+
 impl From<String> for Symbol {
     fn from(s: String) -> Self {
         Self::Other(s)
@@ -65,26 +150,27 @@ impl Display for Symbol {
         match self {
             Symbol::Other(s) => f.write_fmt(format_args!("{}", s)),
             Symbol::ElementaryFunction(e) => f.write_fmt(format_args!("{:?}", e)),
-            _ => f.write_fmt(format_args!("{:?}", self)),
+            Symbol::SpecialForm(sf) => f.write_fmt(format_args!("{:?}", sf)),
+            Symbol::BuiltinFunc(bf) => f.write_fmt(format_args!("{:?}", bf)),
         }
     }
 }
 
 #[derive(Clone, PartialEq)]
 pub enum Atom {
-    Number(f64),
-    String(String),
     Symbol(Symbol),
+    Number(f64),
     Bool(Bool),
+    NIL,
 }
 
 impl std::fmt::Debug for Atom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Atom::Symbol(s) => f.write_fmt(format_args!("Symbol({})", s)),
+            Atom::Symbol(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(s) => f.write_fmt(format_args!("String({:?})", s)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+            Atom::NIL => f.write_fmt(format_args!("NIL")),
         }
     }
 }
@@ -94,8 +180,8 @@ impl Display for Atom {
         match self {
             Atom::Symbol(s) => f.write_fmt(format_args!("{}", s)),
             Atom::Number(n) => f.write_fmt(format_args!("{}", n)),
-            Atom::String(s) => f.write_fmt(format_args!("{:?}", s)),
             Atom::Bool(b) => f.write_fmt(format_args!("{:?}", b)),
+            Atom::NIL => f.write_fmt(format_args!("NIL")),
         }
     }
 }
@@ -104,7 +190,7 @@ impl From<bool> for Atom {
     fn from(value: bool) -> Self {
         match value {
             true => T.into(),
-            false => NIL.into(),
+            false => F.into(),
         }
     }
 }
@@ -189,7 +275,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
     match car(l.clone()) {
         SExpression::Atom(car_l) => match cdr(l.clone()) {
             SExpression::Atom(cdr_l) => {
-                if cdr_l == NIL.into() {
+                if cdr_l == NIL {
                     if is_cdr {
                         format!("{car_l}")
                     } else {
@@ -211,7 +297,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
         },
         SExpression::List(car_l) => match cdr(l.clone()) {
             SExpression::Atom(cdr_l) => {
-                if cdr_l == NIL.into() {
+                if cdr_l == NIL {
                     if is_cdr {
                         display_list(&car_l, false)
                     } else {
@@ -250,7 +336,7 @@ fn display_list(l: &List, is_cdr: bool) -> String {
 /// it's not a list because the right-most element is not NIL
 fn is_cons(l: &List) -> bool {
     match cdr(l.clone()) {
-        SExpression::Atom(a) => a != NIL.into(),
+        SExpression::Atom(a) => a != NIL,
         SExpression::List(cdr_l) => is_cons(&cdr_l),
     }
 }
@@ -298,11 +384,11 @@ impl From<List> for NullableList {
     }
 }
 
-impl From<Bool> for NullableList {
-    fn from(b: Bool) -> Self {
-        match b {
-            Bool::NIL => Self::NIL,
-            Bool::T => panic!("Tried to convert T into a NullableList!"),
+impl From<Atom> for NullableList {
+    fn from(atom: Atom) -> Self {
+        match atom {
+            Atom::NIL => Self::NIL,
+            _ => panic!("Tried to convert {} into a NullableList", atom),
         }
     }
 }
@@ -329,8 +415,8 @@ impl Display for SExpression {
 }
 
 impl SExpression {
-    pub fn eval(self) -> Option<SExpression> {
-        eval(self, NIL.into())
+    pub fn eval(self, a: NullableList) -> Option<SExpression> {
+        eval(self, a).map(|(e, _a)| e)
     }
 }
 

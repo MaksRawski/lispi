@@ -2,7 +2,10 @@ use log::error;
 
 use crate::{
     elementary_functions::cons,
-    types::{Atom, ElementaryFunction, NullableList, SExpression, Symbol, NIL, T},
+    types::{
+        Atom, BuiltinFunc, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, F,
+        NIL, T,
+    },
 };
 
 pub fn parse(s: &str) -> Option<SExpression> {
@@ -10,14 +13,25 @@ pub fn parse(s: &str) -> Option<SExpression> {
         error!("Parenthesis count mismatch!");
         return None;
     };
+    if let Some(t) = find_invalid_token(s) {
+        error!("Invalid token: {}", t);
+        return None;
+    }
     if s.starts_with('(') {
         parse_sexp(s)
     } else {
         parse_atom(s).map(|atom| atom.into())
     }
 }
+
 fn check_parenthesis(s: &str) -> bool {
     s.chars().filter(|c| *c == '(').count() == s.chars().filter(|c| *c == ')').count()
+}
+
+fn find_invalid_token(s: &str) -> Option<char> {
+    s.chars().find(|c| {
+        !c.is_ascii_alphanumeric() && !['.', '(', ')', ' ', '-', '+', '\t', '\n', '\r'].contains(c)
+    })
 }
 
 fn parse_atom(s: &str) -> Option<Atom> {
@@ -28,10 +42,11 @@ fn parse_atom(s: &str) -> Option<Atom> {
 
 fn parse_as_keyword(s: &str) -> Option<Atom> {
     match s.to_uppercase().as_str() {
-        "QUOTE" => Some(Symbol::QUOTE.into()),
-        "COND" => Some(Symbol::COND.into()),
-        "LAMBDA" => Some(Symbol::LAMBDA.into()),
-        "LABEL" => Some(Symbol::LABEL.into()),
+        "QUOTE" => Some(SpecialForm::QUOTE.into()),
+        "COND" => Some(SpecialForm::COND.into()),
+        "LAMBDA" => Some(SpecialForm::LAMBDA.into()),
+        "LABEL" => Some(SpecialForm::LABEL.into()),
+        "DEFINE" => Some(SpecialForm::DEFINE.into()),
 
         "ATOM" => Some(ElementaryFunction::ATOM.into()),
         "CAR" => Some(ElementaryFunction::CAR.into()),
@@ -39,8 +54,22 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "CONS" => Some(ElementaryFunction::CONS.into()),
         "EQ" => Some(ElementaryFunction::EQ.into()),
 
+        "EQUAL" => Some(BuiltinFunc::EQUAL.into()),
+        "SUM" => Some(BuiltinFunc::SUM.into()),
+        "PRDCT" => Some(BuiltinFunc::PRDCT.into()),
+        "EQ1" => Some(BuiltinFunc::EQ1.into()),
+        "LIST" => Some(BuiltinFunc::LIST.into()),
+        "APPEND" => Some(BuiltinFunc::APPEND.into()),
+        "SUBST" => Some(BuiltinFunc::SUBST.into()),
+        "SUBLIS" => Some(BuiltinFunc::SUBLIS.into()),
+        "SASSOC" => Some(BuiltinFunc::SASSOC.into()),
+        "EXPT" => Some(BuiltinFunc::EXPT.into()),
+        "SELECT" => Some(BuiltinFunc::SELECT.into()),
+        "CONC" => Some(BuiltinFunc::CONC.into()),
+
         "T" => Some(T.into()),
-        "NIL" => Some(NIL.into()),
+        "F" => Some(F.into()),
+        "NIL" => Some(NIL),
         _ => None,
     }
 }
@@ -62,13 +91,12 @@ fn parse_as_string(s: &str) -> Option<Atom> {
             error!("Missing a quote mark at the end of: {}", s);
             None
         },
-        |str| Some(Atom::String(str.to_string())),
+        |str| Some(Symbol::Other(str.to_string()).into()),
     )
 }
 
 fn parse_as_other_symbol(s: &str) -> Option<Atom> {
-    // according to the paper atom is just a sequence of letters
-    if s.chars().filter(|c| char::is_alphabetic(*c)).count() == s.len() {
+    if s.chars().filter(|c| c.is_ascii_alphanumeric()).count() == s.len() {
         Some(Atom::Symbol(Symbol::Other(s.to_string())))
     } else {
         error!("Not a valid symbol: {}", s);
@@ -77,8 +105,9 @@ fn parse_as_other_symbol(s: &str) -> Option<Atom> {
 }
 
 fn parse_sexp(s: &str) -> Option<SExpression> {
-    let str: String = s.replace('(', " ( ").replace(')', " ) ");
-    let mut tokens = str.split_whitespace().into_iter().peekable();
+    let s = s.replace('(', " ( ").replace(')', " ) ");
+    let mut tokens = s.split_whitespace().peekable();
+
     parse_tokens_iter(&mut tokens)
 }
 
@@ -134,20 +163,8 @@ mod test_parser {
         assert_eq!(parse("1.23"), Some(1.23.into()));
         assert_eq!(parse("123456789"), Some(123456789.into()));
         assert_eq!(parse("3.141592653589"), Some(3.141592653589.into()));
-        assert_eq!(parse("\"A\""), Some(Atom::String("A".to_string()).into()));
-        assert_eq!(
-            parse("\"A B C\""),
-            Some(Atom::String("A B C".to_string()).into())
-        );
-        assert_eq!(parse("\"1\""), Some(Atom::String("1".into()).into()));
-        assert_eq!(parse("\"1.23\""), Some(Atom::String("1.23".into()).into()));
-        assert_eq!(parse("A"), Some(Symbol::Other("A".to_string()).into()));
-        assert_eq!(parse("\"A"), None);
-        assert_eq!(parse("A\""), None);
-        assert_eq!(
-            parse("\"A B\""),
-            Some(Atom::String("A B".to_string()).into())
-        );
+        assert_eq!(parse("ABC123"), Some("ABC123".into()));
+        assert_eq!(parse("\"ABC123\""), None);
     }
     #[test]
     fn test_parse_lists() {
@@ -203,32 +220,6 @@ mod test_parser {
                 .into()
             )
         );
-        assert_eq!(
-            parse("(A \"B\")"),
-            Some(
-                list![
-                    Symbol::Other("A".to_string()),
-                    Atom::String("B".to_string())
-                ]
-                .into()
-            )
-        );
-        assert_eq!(
-            parse(r#"(A "B" "C")"#),
-            Some(
-                list![
-                    Symbol::Other("A".to_string()),
-                    Atom::String("B".to_string()),
-                    Atom::String("C".to_string())
-                ]
-                .into()
-            )
-        );
-        // TODO: make sure that interpreter fails with "Tried to use string as a function"
-        assert_eq!(
-            parse(r#"("A" "B")"#),
-            Some(list![Atom::String("A".to_string()), Atom::String("B".to_string())].into())
-        );
     }
     #[test]
     fn test_keyword_parsing() {
@@ -244,9 +235,9 @@ mod test_parser {
         );
         assert_eq!(parse("(eq)"), Some(list![ElementaryFunction::EQ].into()));
 
-        assert_eq!(parse("(cond)"), Some(list![Symbol::COND].into()));
-        assert_eq!(parse("(lambda)"), Some(list![Symbol::LAMBDA].into()));
-        assert_eq!(parse("(label)"), Some(list![Symbol::LABEL].into()));
+        assert_eq!(parse("(cond)"), Some(list![SpecialForm::COND].into()));
+        assert_eq!(parse("(lambda)"), Some(list![SpecialForm::LAMBDA].into()));
+        assert_eq!(parse("(label)"), Some(list![SpecialForm::LABEL].into()));
         assert_eq!(parse("(T)"), Some(list![T].into()));
         assert_eq!(parse("(NIL)"), Some(list![NIL].into()));
     }
@@ -257,10 +248,6 @@ mod test_parser {
             Some(list![ElementaryFunction::ATOM, 1].into())
         );
         assert_eq!(
-            parse("(atom \"1\")"),
-            Some(list![ElementaryFunction::ATOM, Atom::String("1".to_string())].into())
-        );
-        assert_eq!(
             parse("(atom x)"),
             Some(list![ElementaryFunction::ATOM, Symbol::Other("x".to_string())].into())
         );
@@ -269,33 +256,14 @@ mod test_parser {
             Some(
                 list![
                     ElementaryFunction::ATOM,
-                    list![Symbol::QUOTE, Symbol::Other("x".to_string())]
+                    list![SpecialForm::QUOTE, Symbol::Other("x".to_string())]
                 ]
                 .into()
             )
-        );
-        assert_eq!(
-            parse("(atom \"x\")"),
-            Some(list![ElementaryFunction::ATOM, Atom::String("x".to_string())].into())
         );
         assert_eq!(
             parse("(cons 1 2)"),
             Some(list![ElementaryFunction::CONS, 1, 2].into())
-        );
-        assert_eq!(
-            parse("(cons \"1\" 2)"),
-            Some(list![ElementaryFunction::CONS, Atom::String("1".to_string()), 2].into())
-        );
-        assert_eq!(
-            parse("(cons \"1\" \"2\")"),
-            Some(
-                list![
-                    ElementaryFunction::CONS,
-                    Atom::String("1".to_string()),
-                    Atom::String("2".to_string())
-                ]
-                .into()
-            )
         );
     }
     #[test]
@@ -316,8 +284,8 @@ mod test_parser {
             Some(
                 list![
                     ElementaryFunction::CONS,
-                    list![Symbol::QUOTE, "A"],
-                    list![Symbol::QUOTE, "B"]
+                    list![SpecialForm::QUOTE, "A"],
+                    list![SpecialForm::QUOTE, "B"]
                 ]
                 .into()
             )
@@ -329,8 +297,8 @@ mod test_parser {
                     ElementaryFunction::CAR,
                     list![
                         ElementaryFunction::CONS,
-                        list![Symbol::QUOTE, "A"],
-                        list![Symbol::QUOTE, "B"]
+                        list![SpecialForm::QUOTE, "A"],
+                        list![SpecialForm::QUOTE, "B"]
                     ]
                 ]
                 .into()
