@@ -47,6 +47,7 @@ pub enum SpecialForm {
     PROG,
     LABEL,
     LAMBDA,
+    DEFINE,
 }
 
 use crate::interpreter::special_form_glue::*;
@@ -59,6 +60,7 @@ impl SpecialForm {
             SpecialForm::OR => handle_or(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::LABEL => handle_label(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::LAMBDA => handle_lambda(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::DEFINE => define_fn(e_list, a).map(|a| (NIL.into(), a.into())),
             SpecialForm::PROG => todo!(),
         }
     }

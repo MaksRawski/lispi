@@ -3,8 +3,8 @@ use log::error;
 use crate::{
     elementary_functions::cons,
     types::{
-        Atom, BuiltinFunc, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, NIL,
-        T,
+        Atom, BuiltinFunc, ElementaryFunction, NullableList, SExpression, SpecialForm, Symbol, F,
+        NIL, T,
     },
 };
 
@@ -46,6 +46,7 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "COND" => Some(SpecialForm::COND.into()),
         "LAMBDA" => Some(SpecialForm::LAMBDA.into()),
         "LABEL" => Some(SpecialForm::LABEL.into()),
+        "DEFINE" => Some(SpecialForm::DEFINE.into()),
 
         "ATOM" => Some(ElementaryFunction::ATOM.into()),
         "CAR" => Some(ElementaryFunction::CAR.into()),
@@ -67,7 +68,8 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "CONC" => Some(BuiltinFunc::CONC.into()),
 
         "T" => Some(T.into()),
-        "NIL" => Some(NIL.into()),
+        "F" => Some(F.into()),
+        "NIL" => Some(NIL),
         _ => None,
     }
 }
