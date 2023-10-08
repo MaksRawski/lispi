@@ -139,6 +139,60 @@ pub(crate) fn define_fn(e: List, a: NullableList) -> Option<List> {
 }
 
 #[test]
+fn test_equal_fn() {
+    use crate::types::{NIL, T};
+    assert_eq!(
+        equal_fn(
+            list![
+                BuiltinFunc::EQUAL,
+                list![SpecialForm::QUOTE, "X"],
+                list![SpecialForm::QUOTE, "X"]
+            ],
+            NIL.into()
+        ),
+        Some(T.into())
+    );
+    assert_eq!(equal_fn(list![BuiltinFunc::EQUAL], NIL.into()), None);
+    assert_eq!(
+        equal_fn(
+            list![BuiltinFunc::EQUAL, list![SpecialForm::QUOTE, "X"]],
+            NIL.into()
+        ),
+        None
+    );
+}
+
+#[test]
+fn test_sum_fn() {
+    use crate::types::NIL;
+    assert_eq!(
+        sum_fn(list![BuiltinFunc::SUM, 1.5, 2.4], NIL.into()),
+        Some(3.9.into())
+    );
+    assert_eq!(
+        sum_fn(list![BuiltinFunc::SUM, 0, -42], NIL.into()),
+        Some((-42).into())
+    );
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM, 0], NIL.into()), None);
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM], NIL.into()), None);
+}
+
+#[test]
+fn test_prdct_fn() {
+    use crate::types::NIL;
+    assert_eq!(
+        prdct_fn(list![BuiltinFunc::PRDCT, 1.5, 2], NIL.into()),
+        Some(3.into())
+    );
+    assert_eq!(
+        prdct_fn(list![BuiltinFunc::PRDCT, -1, 0], NIL.into()),
+        Some(0.into())
+    );
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT, 0], NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT], NIL.into()), None);
+}
+
+#[test]
 fn test_define_fn() {
     use crate::types::NIL;
 

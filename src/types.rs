@@ -14,8 +14,6 @@ pub const T: Bool = Bool::T;
 pub const F: Bool = Bool::F;
 pub const NIL: Atom = Atom::NIL;
 
-// TODO: let's keep those since those *really* are elementary
-// for those that are `define`d using sexps we'll do sth else
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ElementaryFunction {
     CAR,

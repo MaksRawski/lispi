@@ -143,8 +143,8 @@ fn evlis(m: NullableList, a: NullableList) -> Option<NullableList> {
         NullableList::List(m_list) => match cdr(m_list.clone()) {
             SExpression::Atom(cdr_m_list) => Some(
                 cons(
-                    dbg!(eval(car(m_list), a.clone())?.0),
-                    dbg!(eval(cdr_m_list.into(), a))?.0,
+                    eval(car(m_list), a.clone())?.0,
+                    eval(cdr_m_list.into(), a)?.0,
                 )
                 .into(),
             ),
@@ -273,8 +273,31 @@ fn test_evlis() {
 }
 
 #[test]
+fn test_handle_quote() {
+    use crate::list_macros::list;
+
+    assert_eq!(
+        handle_quote(list![SpecialForm::QUOTE, list!["A", "B", "C"]], NIL.into()),
+        Some(list!["A", "B", "C"].into())
+    );
+    assert_eq!(
+        handle_quote(
+            list![SpecialForm::QUOTE, list![list!["A"], list!["B", "C"]]],
+            NIL.into()
+        ),
+        Some(list![list!["A"], list!["B", "C"]].into())
+    );
+    assert_eq!(
+        handle_quote(list![SpecialForm::QUOTE, NIL], NIL.into()),
+        Some(NIL.into())
+    );
+    assert_eq!(handle_quote(list![SpecialForm::QUOTE], NIL.into()), None);
+}
+
+#[test]
 fn test_and() {
-    use crate::list;
+    use crate::list_macros::list;
+
     assert_eq!(handle_and(list![T, T, T], NIL.into()), Some(true.into()));
     assert_eq!(handle_and(list![T, T, F], NIL.into()), Some(false.into()));
     assert_eq!(handle_and(list![1, 2, 3], NIL.into()), Some(true.into()));
@@ -282,7 +305,8 @@ fn test_and() {
 
 #[test]
 fn test_or() {
-    use crate::list;
+    use crate::list_macros::list;
+
     assert_eq!(handle_or(list![F, F, T], NIL.into()), Some(true.into()));
     assert_eq!(handle_or(list![F, F, F], NIL.into()), Some(false.into()));
     assert_eq!(handle_or(list![1, 2, 3], NIL.into()), Some(false.into()));
