@@ -8,17 +8,17 @@ use crate::{
 use super::eval;
 
 pub(crate) fn handle_quote(e_list: List, _a: NullableList) -> Option<SExpression> {
-    compose_car_cdr("cadr", e_list)
+    compose_car_cdr("cadr", e_list).or_else(|| {
+        log::error!("QUOTE requires an argument.");
+        None
+    })
 }
 
 pub(crate) fn handle_cond(e_list: List, a: NullableList) -> Option<SExpression> {
-    match cdr(e_list.clone()) {
+    match cdr(e_list) {
         SExpression::List(terms) => evcon(terms, a),
         SExpression::Atom(_) => {
-            log::error!(
-                "COND requires arguments to be of the form: (predicate expression), got: {}",
-                e_list
-            );
+            log::error!("COND requires at least one list as an argument.");
             None
         }
     }
