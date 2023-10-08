@@ -127,8 +127,10 @@ pub fn assoc_v(x: Atom, y: List) -> Option<SExpression> {
             if eq(caar_y, x.clone()) {
                 // the paper mentions cadar here but what they probably meant is cdar
                 // as cadar doesn't even make sense in their example
-                compose_car_cdr("cdar", y.clone())
-                    .or_else(|| panic!("No value is associated with {x} in {y}."))
+                compose_car_cdr("cdar", y.clone()).or_else(|| {
+                    log::error!("No value is associated with {x} in {y}.");
+                    None
+                })
             } else if let SExpression::List(cdr_y_list) = cdr(y) {
                 assoc_v(x, cdr_y_list)
             } else {
