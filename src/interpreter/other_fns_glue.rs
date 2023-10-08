@@ -9,61 +9,94 @@ use crate::{
 use super::eval;
 
 pub(crate) fn equal_fn(e: List, a: NullableList) -> Option<SExpression> {
-    let args = if let SExpression::List(l) = cdr(e) {
-        l
-    } else {
-        log::error!("EQUAL requires two arguments");
-        return None;
-    };
-
-    let x = eval(car(args.clone()), a.clone())?.0;
-    let y = eval(compose_car_cdr("cadr", args)?, a)?.0;
-    Some(equal(x, y).into())
+    match cdr(e.clone()) {
+        SExpression::List(arguments) => {
+            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let y = eval(
+                compose_car_cdr("cadr", arguments).or_else(|| {
+                    log::error!(
+                        "EQUAL requires two arguments, but only one was provided: {}",
+                        e
+                    );
+                    None
+                })?,
+                a,
+            )?
+            .0;
+            Some(equal(x, y).into())
+        }
+        SExpression::Atom(_) => {
+            log::error!("Invalid use of EQUAL: {} two arguments are required.", e);
+            None
+        }
+    }
 }
 
 pub(crate) fn sum_fn(e: List, a: NullableList) -> Option<SExpression> {
-    let args = if let SExpression::List(l) = cdr(e) {
-        l
-    } else {
-        log::error!("EQUAL requires two arguments");
-        return None;
-    };
-    let x = eval(car(args.clone()), a.clone())?.0;
-    if let SExpression::Atom(Atom::Number(x)) = x {
-        let y = eval(compose_car_cdr("cadr", args)?, a)?.0;
-        match y {
-            SExpression::Atom(Atom::Number(y)) => Some((x + y).into()),
-            _ => {
-                log::error!("Tried to sum {x} with non-number: {y}");
+    match cdr(e.clone()) {
+        SExpression::List(arguments) => {
+            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let y = eval(
+                compose_car_cdr("cadr", arguments).or_else(|| {
+                    log::error!(
+                        "SUM requires two arguments, but only one was provided: {}",
+                        e
+                    );
+                    None
+                })?,
+                a,
+            )?
+            .0;
+            if let SExpression::Atom(Atom::Number(nx)) = x {
+                if let SExpression::Atom(Atom::Number(ny)) = y {
+                    Some((nx + ny).into())
+                } else {
+                    log::error!("Tried to sum non-number {y} in: {e}");
+                    None
+                }
+            } else {
+                log::error!("Tried to sum non-number {x} in: {e}");
                 None
             }
         }
-    } else {
-        log::error!("Tried to sum non-number: {x}");
-        None
+        SExpression::Atom(_) => {
+            log::error!("Invalid use of SUM: {} two arguments are required.", e);
+            None
+        }
     }
 }
 
 pub(crate) fn prdct_fn(e: List, a: NullableList) -> Option<SExpression> {
-    let args = if let SExpression::List(l) = cdr(e) {
-        l
-    } else {
-        log::error!("EQUAL requires two arguments");
-        return None;
-    };
-    let x = eval(car(args.clone()), a.clone())?.0;
-    if let SExpression::Atom(Atom::Number(x)) = x {
-        let y = eval(compose_car_cdr("cadr", args)?, a)?.0;
-        match y {
-            SExpression::Atom(Atom::Number(y)) => Some((x * y).into()),
-            _ => {
-                log::error!("Tried to take a prdct of {x} with non-number: {y}");
+    match cdr(e.clone()) {
+        SExpression::List(arguments) => {
+            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let y = eval(
+                compose_car_cdr("cadr", arguments).or_else(|| {
+                    log::error!(
+                        "SUM requires two arguments, but only one was provided: {}",
+                        e
+                    );
+                    None
+                })?,
+                a,
+            )?
+            .0;
+            if let SExpression::Atom(Atom::Number(nx)) = x {
+                if let SExpression::Atom(Atom::Number(ny)) = y {
+                    Some((nx * ny).into())
+                } else {
+                    log::error!("Tried to sum non-number {y} in: {e}");
+                    None
+                }
+            } else {
+                log::error!("Tried to sum non-number {x} in: {e}");
                 None
             }
         }
-    } else {
-        log::error!("Tried to take a prdct of non-number: {x}");
-        None
+        SExpression::Atom(_) => {
+            log::error!("Invalid use of SUM: {} two arguments are required.", e);
+            None
+        }
     }
 }
 
@@ -103,6 +136,60 @@ pub(crate) fn define_fn(e: List, a: NullableList) -> Option<List> {
         log::error!("DEFINE expects its argument to be a list of pairs: {}", e);
         None
     }
+}
+
+#[test]
+fn test_equal_fn() {
+    use crate::types::{NIL, T};
+    assert_eq!(
+        equal_fn(
+            list![
+                BuiltinFunc::EQUAL,
+                list![SpecialForm::QUOTE, "X"],
+                list![SpecialForm::QUOTE, "X"]
+            ],
+            NIL.into()
+        ),
+        Some(T.into())
+    );
+    assert_eq!(equal_fn(list![BuiltinFunc::EQUAL], NIL.into()), None);
+    assert_eq!(
+        equal_fn(
+            list![BuiltinFunc::EQUAL, list![SpecialForm::QUOTE, "X"]],
+            NIL.into()
+        ),
+        None
+    );
+}
+
+#[test]
+fn test_sum_fn() {
+    use crate::types::NIL;
+    assert_eq!(
+        sum_fn(list![BuiltinFunc::SUM, 1.5, 2.4], NIL.into()),
+        Some(3.9.into())
+    );
+    assert_eq!(
+        sum_fn(list![BuiltinFunc::SUM, 0, -42], NIL.into()),
+        Some((-42).into())
+    );
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM, 0], NIL.into()), None);
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM], NIL.into()), None);
+}
+
+#[test]
+fn test_prdct_fn() {
+    use crate::types::NIL;
+    assert_eq!(
+        prdct_fn(list![BuiltinFunc::PRDCT, 1.5, 2], NIL.into()),
+        Some(3.into())
+    );
+    assert_eq!(
+        prdct_fn(list![BuiltinFunc::PRDCT, -1, 0], NIL.into()),
+        Some(0.into())
+    );
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT, 0], NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT], NIL.into()), None);
 }
 
 #[test]
