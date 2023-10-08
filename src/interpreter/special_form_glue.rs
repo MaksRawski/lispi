@@ -56,42 +56,25 @@ pub(crate) fn handle_or(e_list: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-/// this function is called basically whenever the symbol is not an elementary function
-// TODO: could the user define a symbol which upon evaluation does a side effect? yes?
+/// called whenever a symbol is not a builtin function
 pub(crate) fn handle_other_symbol(
-    s: String,
-    e_list: List,
+    symbol: String,
+    e: List,
     a: NullableList,
 ) -> Option<(SExpression, NullableList)> {
-    match a.clone() {
-        NullableList::List(a_list) => match cdr(e_list) {
-            SExpression::Atom(argument) => eval(
-                cons(
-                    assoc_v(s.clone().into(), a_list).or_else(|| {
-                        log::error!("Invalid function: {}, symbol unbound.", s);
-                        None
-                    })?,
-                    eval(argument.into(), a.clone())?.0,
-                )
-                .into(),
-                a,
-            ),
-            SExpression::List(arguments) => eval(
-                cons(
-                    assoc_v(s.clone().into(), a_list).or_else(|| {
-                        log::error!("Invalid function: {}, symbol unbound.", s);
-                        None
-                    })?,
-                    eval(arguments.into(), a.clone())?.0, // NOTE: paper claims that evlis should be used here
-                )
-                .into(),
-                a,
-            ),
-        },
-        NullableList::NIL => {
-            log::error!("Invalid function: {}, symbol unbound.", s);
+    if let NullableList::List(a_list) = a.clone() {
+        let looked_up_symbol = assoc_v(symbol.clone().into(), a_list.clone()).or_else(|| {
+            log::error!("Invalid function: {}, symbol unbound.", symbol);
             None
+        })?;
+
+        match cdr(e) {
+            SExpression::List(arguments) => eval(cons(looked_up_symbol, arguments).into(), a),
+            SExpression::Atom(_) => eval(looked_up_symbol, a_list.into()),
         }
+    } else {
+        log::error!("Invalid function: {}, symbol unbound.", symbol);
+        None
     }
 }
 
