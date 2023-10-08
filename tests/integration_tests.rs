@@ -49,7 +49,6 @@ fn test_parse_eval_fac() {
 
 #[test]
 fn test_parse_eval_define_fac() {
-    env_logger::init();
     let fac = "(define (fac (lambda (n) (cond ((equal n 0) 1) (T (prdct n (fac (sum n -1))))))))";
     let fac_def = parse(fac).unwrap();
     let (_, a_list) = eval(fac_def, NIL.into()).unwrap();
@@ -70,7 +69,6 @@ fn test_parse_eval_define_ff() {
 #[test]
 fn test_parse_eval_define_maplist() {
     use lispi::{list, types::T};
-    env_logger::init();
 
     let maplist = "(define (maplist (lambda (f x)
 (cond
@@ -80,10 +78,10 @@ fn test_parse_eval_define_maplist() {
 
     let maplist_def = parse(maplist).unwrap();
     let (_, a_list) = eval(maplist_def, NIL.into()).unwrap();
-    // assert_eq!(
-    //     parse("(maplist atom NIL)").unwrap().eval(a_list.clone()),
-    //     Some(NIL.into())
-    // );
+    assert_eq!(
+        parse("(maplist atom NIL)").unwrap().eval(a_list.clone()),
+        Some(NIL.into())
+    );
     assert_eq!(
         parse("(maplist atom 1)").unwrap().eval(a_list.clone()),
         Some(T.into())
