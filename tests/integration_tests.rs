@@ -70,11 +70,11 @@ fn test_parse_eval_define_ff() {
 fn test_parse_eval_define_maplist() {
     use lispi::{list, types::T};
 
-    let maplist = "(define (maplist (lambda (f x)
+    let maplist = "(define (maplist (lambda (fn x)
 (cond
       ((equal x NIL) NIL)
-      ((atom x) (f x))
-      (T (cons (f (car x)) (maplist f (cdr x))))))))";
+      ((atom x) (fn x))
+      (T (cons (fn (car x)) (maplist fn (cdr x))))))))";
 
     let maplist_def = parse(maplist).unwrap();
     let (_, a_list) = eval(maplist_def, NIL.into()).unwrap();
