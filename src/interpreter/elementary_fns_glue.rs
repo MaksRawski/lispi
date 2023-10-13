@@ -62,7 +62,7 @@ pub(crate) fn cdr_fn(e_list: List, a: NullableList) -> Option<SExpression> {
 pub(crate) fn cons_fn(e_list: List, a: NullableList) -> Option<SExpression> {
     match cdr(e_list.clone()) {
         SExpression::List(arguments) => Some(
-            list![
+            cons(
                 eval(car(arguments.clone()), a.clone())?.0,
                 eval(
                     compose_car_cdr("cadr", arguments).or_else(|| {
@@ -72,10 +72,10 @@ pub(crate) fn cons_fn(e_list: List, a: NullableList) -> Option<SExpression> {
                         );
                         None
                     })?,
-                    a
+                    a,
                 )?
-                .0
-            ]
+                .0,
+            )
             .into(),
         ),
         SExpression::Atom(_argument) => {
@@ -199,7 +199,7 @@ fn test_cons_fn() {
     use crate::types::NIL;
     assert_eq!(
         cons_fn(list![ElementaryFunction::CONS, "A", "B"], NIL.into()),
-        Some(list!["A", "B"].into())
+        Some(cons("A", "B").into())
     );
     assert_eq!(
         cons_fn(list![ElementaryFunction::CONS, "A"], NIL.into()),

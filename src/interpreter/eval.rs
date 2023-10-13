@@ -100,6 +100,7 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<(SExpression, NullableLis
 
 #[cfg(test)]
 mod elementary_functions_tests {
+    use crate::elementary_functions::cons;
     use crate::list_macros::list;
     use crate::types::{F, T};
 
@@ -147,7 +148,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some((list!["A", "B"].into(), NIL.into()))
+            Some((cons("A", "B").into(), NIL.into()))
         );
         // (cons (cons 'A 'B) 'C) => (('A 'B) 'C)
         assert_eq!(
@@ -160,7 +161,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some((list![list!["A", "B"], "C"].into(), NIL.into()))
+            Some((cons(list!["A", "B"], "C").into(), NIL.into()))
         );
     }
     #[test]
@@ -263,7 +264,7 @@ mod elementary_functions_tests {
                 .into(),
                 NIL.into()
             ),
-            Some((list!["A", "B"].into(), NIL.into()))
+            Some((cons("A", "B").into(), NIL.into()))
         );
     }
 }
