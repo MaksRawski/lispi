@@ -56,7 +56,7 @@ the expression matching the first predicate that returned T
 - `LAMBDA` - allows you to define your own function! Look at an example to get a sense of how to use it
 - `LABEL` - Kind of like `define` but limits the scope. 
 In `(label name expression)` `name` is associated with `expression` only in the body of that expression.
-Useful only for recursive functions that you don't want `define`'d.
+Useful only for recursive functions that you don't want `define`d.
 
 ### Other
 - `EQUAL`  - compares two expressions
@@ -72,7 +72,7 @@ Which I guess in a way makes this LISP implementation less of a List Processor.
 ### symbols
 (look at page 41 of programmer's manual for reference)
 Instead of having a place in memory with an association list of all symbols (which in turn would have their own property lists)
-I've just used enums for the built-in symbols, and during parsing I create an AST with appropriate variants. Which when `eval`d run
+I've just used enums for the built-in symbols, and during parsing I create an AST with appropriate variants. Which when `eval`'d run
 the appropriate subroutines that are just regular rust functions.
 
 ### side effects
