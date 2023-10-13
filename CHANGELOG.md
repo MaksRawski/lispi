@@ -1,3 +1,6 @@
+# 0.2.1
++ fix: `cons` now returns an actual cons object
+
 # 0.2.0
 + added `define`
 + added numeric functions: sum and prdct
