@@ -329,13 +329,13 @@ fn test_handle_other_symbol() {
             ],
             a.clone()
         ),
-        Some((list![1, 2].into(), a))
+        Some((cons(1, 2).into(), a))
     );
 
     let a: NullableList = list![cons("mycons", ElementaryFunction::CONS)].into();
     assert_eq!(
         handle_other_symbol("mycons".into(), list!["mycons", 1, 2], a.clone()),
-        Some((list![1, 2].into(), a))
+        Some((cons(1, 2).into(), a))
     );
 
     assert_eq!(
