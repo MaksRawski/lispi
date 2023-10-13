@@ -1,5 +1,3 @@
-use crate::list;
-
 use crate::interpreter::eval;
 use crate::{
     elementary_functions::*,
@@ -130,6 +128,7 @@ pub(crate) fn eq_fn(e_list: List, a: NullableList) -> Option<SExpression> {
 
 #[test]
 fn test_atom_fn() {
+    use crate::list;
     use crate::types::{NIL, T};
     assert_eq!(
         atom_fn(
@@ -143,6 +142,7 @@ fn test_atom_fn() {
 
 #[test]
 fn test_car_fn() {
+    use crate::list;
     use crate::types::NIL;
     assert_eq!(
         car_fn(
@@ -166,6 +166,7 @@ fn test_car_fn() {
 
 #[test]
 fn test_cdr_fn() {
+    use crate::list;
     use crate::types::NIL;
     assert_eq!(
         cdr_fn(
@@ -196,6 +197,7 @@ fn test_cdr_fn() {
 
 #[test]
 fn test_cons_fn() {
+    use crate::list;
     use crate::types::NIL;
     assert_eq!(
         cons_fn(list![ElementaryFunction::CONS, "A", "B"], NIL.into()),
@@ -210,6 +212,7 @@ fn test_cons_fn() {
 
 #[test]
 fn test_eq_fn() {
+    use crate::list;
     use crate::types::{F, NIL, T};
     assert_eq!(
         eq_fn(list![ElementaryFunction::EQ, "A", "A"], NIL.into()),
