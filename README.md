@@ -13,8 +13,6 @@ Well, some of them seem to be *internal* in a way so for now I want to get enoug
 them implemented to at least be able to write the Wang Algorithm (3.4 section of the programmer's manual).
 
 ## Usage
-NOTE: This project is **FAR** from being finished. Right now only a basic REPL is available.
-
 After installing from crates.io with `cargo install lispi`, you can get access to the REPL by just running `lispi`.
 In which you can for example:
 
@@ -37,6 +35,8 @@ NIL
 120
 ```
 
+You can evaluate files by running `lispi FILE.lisp`. It will evaluate S-expressions in file
+sequentially and print their values.
 
 ## Available functions
 ### Elementary

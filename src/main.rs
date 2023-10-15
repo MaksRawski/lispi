@@ -28,7 +28,7 @@ fn main() {
                 .long("load")
                 .takes_value(true)
                 .value_name("FILE")
-                .help("Loads the contents of file into the REPL"),
+                .help("Loads the content of FILE into the REPL"),
         )
         .get_matches();
 

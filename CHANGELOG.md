@@ -1,3 +1,7 @@
+# 0.3.0
++ added file support
+    + with `--load` you can load symbols defined in file into REPL
+
 # 0.2.1
 + fix: `cons` now returns an actual cons object
 

@@ -46,6 +46,15 @@ fn extract_sexp_range(s: &str, offset: usize) -> Option<RangeInclusive<usize>> {
     }
 }
 
+#[test]
+fn test_extract_sexp_range() {
+    assert_eq!(extract_sexp_range("123 (456) 789", 0), Some(4..=8));
+    assert_eq!(extract_sexp_range("123 (456) 789", 4), Some(4..=8));
+    assert_eq!(extract_sexp_range("123 (456) 789", 5), None);
+    assert_eq!(extract_sexp_range("123 (456) 789", 14), None);
+    assert_eq!(extract_sexp_range("123 456 789", 0), None);
+}
+
 pub(crate) fn split_sexps(s: &str) -> Option<Vec<&str>> {
     let mut sexps = Vec::new();
     let mut offset = 0;
@@ -55,15 +64,6 @@ pub(crate) fn split_sexps(s: &str) -> Option<Vec<&str>> {
         sexps.push(&s[range]);
     }
     Some(sexps)
-}
-
-#[test]
-fn test_extract_sexp() {
-    assert_eq!(extract_sexp_range("123 (456) 789", 0), Some(4..=8));
-    assert_eq!(extract_sexp_range("123 (456) 789", 4), Some(4..=8));
-    assert_eq!(extract_sexp_range("123 (456) 789", 5), None);
-    assert_eq!(extract_sexp_range("123 (456) 789", 14), None);
-    assert_eq!(extract_sexp_range("123 456 789", 0), None);
 }
 
 #[test]
