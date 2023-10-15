@@ -1,0 +1,8 @@
+(define (count (lambda (x) (cond ((equal x NIL) 0) (T (sum 1 (count (car x))))))))
+(define (s (lambda (x) (cons x nil))))
+(define (peano (lambda (n) (cond ((eq n 0) NIL) (T (s (peano (sum n -1))))))))
+(define (p car))
+(define (add (lambda (x y) (cond ((equal x NIL) y) (T (add (p x) (s y)))))))
+(define (mul (lambda (x y) (cond ((equal y (s NIL)) x) (T (add x (mul x (p y))))))))
+(define (fac (lambda (n) (cond ((equal n nil) (s nil)) (T (mul n (fac (p n))))))))
+(count (fac (peano 4)))

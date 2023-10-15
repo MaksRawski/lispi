@@ -75,7 +75,7 @@ fn test_split_sexps() {
     assert_eq!(split_sexps("(123"), None);
 }
 
-pub fn eval_file<W>(filename: &str, a_list: &mut NullableList, mut output: W) -> Option<()>
+pub fn eval_file<W>(filename: &str, a_list: &mut NullableList, output: &mut W) -> Option<()>
 where
     W: Write,
 {
@@ -113,14 +113,14 @@ pub fn get_bound_symbols(a: &NullableList) -> Option<Vec<String>> {
                     _ => Some(v),
                 }
             }
-            _ => todo!("invalid alist"),
+            _ => todo!("invalid alist: {a:?}"),
         },
         NullableList::NIL => Some(vec![]),
     }
 }
 
 #[test]
-fn test_bound_symbols() {
+fn test_get_bound_symbols() {
     use crate::list;
     assert_eq!(
         get_bound_symbols(&list![cons("first", ElementaryFunction::CAR)].into()),
