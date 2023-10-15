@@ -122,7 +122,6 @@ pub fn get_bound_symbols(a: &NullableList) -> Option<Vec<String>> {
 #[test]
 fn test_bound_symbols() {
     use crate::list;
-    env_logger::init();
     assert_eq!(
         get_bound_symbols(&list![cons("first", ElementaryFunction::CAR)].into()),
         Some(vec!["first".to_string()])
