@@ -57,6 +57,27 @@ pub(crate) fn cdr_fn(e_list: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
+pub(crate) fn car_cdr_composition(s: &str, e_list: List, a: NullableList) -> Option<SExpression> {
+    match eval(
+        compose_car_cdr("cadr", e_list).or_else(|| {
+            log::error!("{s} requires a list as argument.");
+            None
+        })?,
+        a,
+    )?
+    .0
+    {
+        SExpression::List(list) => compose_car_cdr(s, list),
+        SExpression::Atom(argument) => {
+            log::error!(
+                "{s} requires an argument to be a list, but was: {}",
+                argument
+            );
+            None
+        }
+    }
+}
+
 pub(crate) fn cons_fn(e_list: List, a: NullableList) -> Option<SExpression> {
     match cdr(e_list.clone()) {
         SExpression::List(arguments) => Some(
@@ -193,6 +214,72 @@ fn test_cdr_fn() {
         None
     );
     assert_eq!(cdr_fn(list![ElementaryFunction::CDR], NIL.into()), None);
+}
+
+#[test]
+fn test_car_cdr_composition() {
+    use crate::list;
+    use crate::types::NIL;
+    assert_eq!(
+        car_cdr_composition(
+            "CAAR",
+            list![
+                ElementaryFunction::CarCdrComposition("CAAR".to_string()),
+                list![
+                    ElementaryFunction::CONS,
+                    list![ElementaryFunction::CONS, 1, 2],
+                    list![ElementaryFunction::CONS, 3, 4]
+                ]
+            ],
+            NIL.into()
+        ),
+        Some(1.into())
+    );
+    assert_eq!(
+        car_cdr_composition(
+            "CDAR",
+            list![
+                ElementaryFunction::CarCdrComposition("CDAR".to_string()),
+                list![
+                    ElementaryFunction::CONS,
+                    list![ElementaryFunction::CONS, 1, 2],
+                    list![ElementaryFunction::CONS, 3, 4]
+                ]
+            ],
+            NIL.into()
+        ),
+        Some(2.into())
+    );
+    assert_eq!(
+        car_cdr_composition(
+            "CADR",
+            list![
+                ElementaryFunction::CarCdrComposition("CADR".to_string()),
+                list![
+                    ElementaryFunction::CONS,
+                    list![ElementaryFunction::CONS, 1, 2],
+                    list![ElementaryFunction::CONS, 3, 4]
+                ]
+            ],
+            NIL.into()
+        ),
+        Some(3.into())
+    );
+    assert_eq!(
+        car_cdr_composition(
+            "CDDR",
+            list![
+                ElementaryFunction::CarCdrComposition("CDDR".to_string()),
+                list![
+                    ElementaryFunction::CONS,
+                    list![ElementaryFunction::CONS, 1, 2],
+                    list![ElementaryFunction::CONS, 3, 4]
+                ]
+            ],
+            NIL.into()
+        ),
+        Some(4.into())
+    );
 }
 
 #[test]

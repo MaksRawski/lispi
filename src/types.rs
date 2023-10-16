@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 use crate::{
     elementary_functions::{car, cdr},
     interpreter::eval,
+    list_macros::compose_car_cdr,
 };
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -14,13 +15,26 @@ pub const T: Bool = Bool::T;
 pub const F: Bool = Bool::F;
 pub const NIL: Atom = Atom::NIL;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum ElementaryFunction {
     CAR,
     CDR,
+    CarCdrComposition(String),
     CONS,
     EQ,
     ATOM,
+}
+impl Debug for ElementaryFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CarCdrComposition(c) => write!(f, "{c}"),
+            Self::CAR => write!(f, "CAR"),
+            Self::CDR => write!(f, "CDR"),
+            Self::CONS => write!(f, "CONS"),
+            Self::EQ => write!(f, "EQ"),
+            Self::ATOM => write!(f, "ATOM"),
+        }
+    }
 }
 
 use crate::interpreter::elementary_fns_glue::*;
@@ -32,6 +46,9 @@ impl ElementaryFunction {
             ElementaryFunction::CAR => car_fn(e_list, a.clone()).map(|e| (e, a)),
             ElementaryFunction::CDR => cdr_fn(e_list, a.clone()).map(|e| (e, a)),
             ElementaryFunction::CONS => cons_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::CarCdrComposition(c) => {
+                car_cdr_composition(&c, e_list, a.clone()).map(|e| (e, a))
+            }
         }
     }
 }

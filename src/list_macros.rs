@@ -60,9 +60,9 @@ fn test_list_macro() {
 /// assert_eq!(compose_car_cdr("cddr", c.clone()), Some(4.into()));
 /// ```
 pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
-    if car_cdr_composition == "car" {
+    if car_cdr_composition.to_lowercase() == "car" {
         return Some(car(list));
-    } else if car_cdr_composition == "cdr" {
+    } else if car_cdr_composition.to_lowercase() == "cdr" {
         return Some(cdr(list));
     }
 
@@ -71,15 +71,19 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
         "{}r",
         &car_cdr_composition
             .get(0..(car_cdr_composition.len() - 2))
-            .unwrap_or_else(|| panic!("Invalid composition: {}", car_cdr_composition))
+            .or_else(|| {
+                log::error!("Tried to apply {} to: {}", car_cdr_composition, list);
+                None
+            })?
     );
 
-    let next_list = if car_cdr_composition.ends_with("ar") {
+    let next_list = if car_cdr_composition.to_lowercase().ends_with("ar") {
         car(list)
-    } else if car_cdr_composition.ends_with("dr") {
+    } else if car_cdr_composition.to_lowercase().ends_with("dr") {
         cdr(list)
     } else {
-        panic!("invalid composition: {}", car_cdr_composition);
+        log::error!("Tried to apply {} to: {}", car_cdr_composition, list);
+        return None;
     };
 
     if let SExpression::List(l) = next_list {

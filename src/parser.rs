@@ -41,7 +41,13 @@ fn parse_atom(s: &str) -> Option<Atom> {
 }
 
 fn parse_as_keyword(s: &str) -> Option<Atom> {
-    match s.to_uppercase().as_str() {
+    let s = s.to_uppercase();
+    // programmer's manual sets a limit of max 3 compositions, that is:
+    // CADAR is valid but CDADAR is not
+    if s.starts_with('C') && s.ends_with('R') && s.len() > 3 && s.len() < 7 {
+        return Some(ElementaryFunction::CarCdrComposition(s).into());
+    }
+    match s.as_str() {
         "QUOTE" => Some(SpecialForm::QUOTE.into()),
         "COND" => Some(SpecialForm::COND.into()),
         "LAMBDA" => Some(SpecialForm::LAMBDA.into()),
