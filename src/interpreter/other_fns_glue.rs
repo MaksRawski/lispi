@@ -103,8 +103,8 @@ pub(crate) fn prdct_fn(e: List, a: NullableList) -> Option<SExpression> {
 /// define's argument is a list of pairs ((u1, v1), (u2, v2), ...)
 /// where each u is a name and each v is a λ-expression or a function
 ///
-/// always returns NIL (and a new association list)
-pub(crate) fn define_fn(e: List, a: NullableList) -> Option<List> {
+/// returns the defined symbol (symbol itself not its value) and a new association list
+pub(crate) fn define_fn(e: List, a: NullableList) -> Option<(SExpression, List)> {
     // we're going to run this function recursively so we need to check if it's
     // the first call or another one
     let args = if car(e.clone()) == SpecialForm::DEFINE.into() {
@@ -123,14 +123,14 @@ pub(crate) fn define_fn(e: List, a: NullableList) -> Option<List> {
         let u = car(l.clone());
         let v = compose_car_cdr("cadr", l)?;
         let new_a_list = match a {
-            NullableList::List(a_list) => cons(cons(u, v), a_list),
-            NullableList::NIL => list![cons(u, v)],
+            NullableList::List(a_list) => cons(cons(u.clone(), v), a_list),
+            NullableList::NIL => list![cons(u.clone(), v)],
         };
         // if there are more definitions
         if let SExpression::List(cdr_l) = cdr(args) {
             define_fn(cdr_l, new_a_list.into())
         } else {
-            Some(new_a_list)
+            Some((u, new_a_list))
         }
     } else {
         log::error!("DEFINE expects its argument to be a list of pairs: {}", e);
@@ -201,7 +201,7 @@ fn test_define_fn() {
             list![SpecialForm::DEFINE, list!["first", ElementaryFunction::CAR]],
             NIL.into()
         ),
-        Some(list![cons("first", ElementaryFunction::CAR)])
+        Some(("first".into(), list![cons("first", ElementaryFunction::CAR)]))
     );
 
     let ff = list![
@@ -222,7 +222,7 @@ fn test_define_fn() {
             list![SpecialForm::DEFINE, list!["ff", ff.clone()]],
             NIL.into()
         ),
-        Some(list![cons("ff", ff.clone())])
+        Some(("ff".into(), list![cons("ff", ff.clone())]))
     );
 
     // the last definition always ends up on top of the association list
@@ -235,9 +235,9 @@ fn test_define_fn() {
             ],
             NIL.into()
         ),
-        Some(list![
+        Some(("first".into(), list![
             cons("first", ElementaryFunction::CAR),
             cons("ff", ff)
-        ])
+        ]))
     );
 }

@@ -4,8 +4,7 @@ use lispi::{file_parser::eval_file, types::NIL};
 fn test_eval_file_peano_fac_list() {
     let mut output = Vec::with_capacity(10);
     let expected_output = format!(
-        "{}{}\n{}\n",
-        "NIL\n".repeat(10),
+        "s\npeano\np\nadd\nmul\nfac\nseq\nmaplist\ncount\nfac1\n{}\n{}\n",
         "[0, 1, 2, 3, 4]",
         "[1, 1, 2, 6, 24]"
     );
