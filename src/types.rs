@@ -91,6 +91,8 @@ pub enum BuiltinFunc {
     SUBST,
     SUBLIS,
     SASSOC,
+    NULL,
+    NOT,
     SUM,
     PRDCT,
     EXPT,
@@ -115,6 +117,21 @@ impl BuiltinFunc {
             BuiltinFunc::SASSOC => todo!(),
             BuiltinFunc::SELECT => todo!(),
             BuiltinFunc::CONC => todo!(),
+            BuiltinFunc::NULL => compose_car_cdr("cadr", e_list).map(|arg| {
+                let arg = eval(arg, a.clone())?.0;
+                Some(((arg == 0.into() || arg == NIL.into()).into(), a))
+            })?,
+            BuiltinFunc::NOT => compose_car_cdr("cadr", e_list).map(|arg| {
+                let arg = eval(arg, a.clone())?.0;
+                if arg == T.into() {
+                    Some((F.into(), a))
+                } else if arg == F.into() {
+                    Some((T.into(), a))
+                } else {
+                    log::error!("Tried to NOT {arg}");
+                    None
+                }
+            })?,
         }
     }
 }
