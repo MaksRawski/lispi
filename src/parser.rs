@@ -53,6 +53,8 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "LAMBDA" => Some(SpecialForm::LAMBDA.into()),
         "LABEL" => Some(SpecialForm::LABEL.into()),
         "DEFINE" => Some(SpecialForm::DEFINE.into()),
+        "OR" => Some(SpecialForm::OR.into()),
+        "AND" => Some(SpecialForm::AND.into()),
 
         "ATOM" => Some(ElementaryFunction::ATOM.into()),
         "CAR" => Some(ElementaryFunction::CAR.into()),
@@ -61,6 +63,8 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "EQ" => Some(ElementaryFunction::EQ.into()),
 
         "EQUAL" => Some(BuiltinFunc::EQUAL.into()),
+        "NULL" => Some(BuiltinFunc::NULL.into()),
+        "NOT" => Some(BuiltinFunc::NOT.into()),
         "SUM" => Some(BuiltinFunc::SUM.into()),
         "PRDCT" => Some(BuiltinFunc::PRDCT.into()),
         "EQ1" => Some(BuiltinFunc::EQ1.into()),
