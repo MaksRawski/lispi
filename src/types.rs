@@ -107,7 +107,7 @@ impl BuiltinFunc {
             BuiltinFunc::SUM => sum_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::PRDCT => prdct_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EQUAL => equal_fn(e_list, a.clone()).map(|e| (e, a)),
-            BuiltinFunc::EXPT => todo!(),
+            BuiltinFunc::EXPT => expt_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EQ1 => todo!(),
             BuiltinFunc::ATTRIB => todo!(),
             BuiltinFunc::LIST => todo!(),

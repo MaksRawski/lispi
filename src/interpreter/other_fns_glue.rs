@@ -100,6 +100,40 @@ pub(crate) fn prdct_fn(e: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
+pub(crate) fn expt_fn(e: List, a: NullableList) -> Option<SExpression> {
+    match cdr(e.clone()) {
+        SExpression::List(arguments) => {
+            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let y = eval(
+                compose_car_cdr("cadr", arguments).or_else(|| {
+                    log::error!(
+                        "SUM requires two arguments, but only one was provided: {}",
+                        e
+                    );
+                    None
+                })?,
+                a,
+            )?
+            .0;
+            if let SExpression::Atom(Atom::Number(nx)) = x {
+                if let SExpression::Atom(Atom::Number(ny)) = y {
+                    Some((nx.powf(ny)).into())
+                } else {
+                    log::error!("Tried to sum non-number {y} in: {e}");
+                    None
+                }
+            } else {
+                log::error!("Tried to sum non-number {x} in: {e}");
+                None
+            }
+        }
+        SExpression::Atom(_) => {
+            log::error!("Invalid use of SUM: {} two arguments are required.", e);
+            None
+        }
+    }
+}
+
 /// define's argument is a list of pairs ((u1, v1), (u2, v2), ...)
 /// where each u is a name and each v is a λ-expression or a function
 ///
@@ -190,6 +224,25 @@ fn test_prdct_fn() {
     );
     assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT, 0], NIL.into()), None);
     assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT], NIL.into()), None);
+}
+
+#[test]
+fn test_expt_fn() {
+    use crate::types::NIL;
+    assert_eq!(
+        expt_fn(list![BuiltinFunc::EXPT, 2, 3], NIL.into()),
+        Some(8.into())
+    );
+    assert_eq!(
+        expt_fn(list![BuiltinFunc::EXPT, 2, 0], NIL.into()),
+        Some(1.into())
+    );
+    assert_eq!(
+        expt_fn(list![BuiltinFunc::EXPT, 9, 0.5], NIL.into()),
+        Some(3.into())
+    );
+    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT, 0], NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT], NIL.into()), None);
 }
 
 #[test]
