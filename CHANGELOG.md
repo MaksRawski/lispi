@@ -1,6 +1,14 @@
+# 0.3.1
++ functions added:
+  - CAR CDR compositions
+  - NOT, NULL, AND, OR 
+  - EXPT
++ parenthesis are now constantly highlighted in the REPL
++ removed history hinting
+
 # 0.3.0
 + added file support
-    + with `--load` you can load symbols defined in file into REPL
+  + with `--load` you can load symbols defined in file into REPL
 
 # 0.2.1
 + fix: `cons` now returns an actual cons object

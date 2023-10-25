@@ -44,12 +44,14 @@ sequentially and print their values.
 - `EQ`   - compares atoms
 - `CAR`  - gets first element of a list
 - `CDR`  - gets the "tail" of the list, everything but the first element
+- any composition (of less than 3) of CAR and CDR such as `CADAR`
 - `CONS` - constructs a list of 2 elements
 
 ### Special Forms
 - `QUOTE` - returns its argument as a literal
 - `COND`  - takes pairs (predicate expression) as its arguments and returns value of 
 the expression matching the first predicate that returned T
+- `DEFINE` - takes a list of pairs j
 - `AND`   - returns false if any of its arguments is F
 - `OR`    - returns true if any of its arguments is T
 
@@ -62,8 +64,9 @@ Useful only for recursive functions that you don't want `define`d.
 - `EQUAL`  - compares two expressions
 - `SUM`    - returns the sum of two numbers
 - `PRDCT`  - returns the product of two numbers
+- `EXPT`  - returns the exponentiation of the first number raised to the power of the second number
 
-... More is coming!
+
 
 ## Implementation
 Because I'm using rust, which is already an abstraction over assembly, I didn't have to have the exact same structure as the one shown in the manual.
@@ -76,9 +79,8 @@ I've just used enums for the built-in symbols, and during parsing I create an AS
 the appropriate subroutines that are just regular rust functions.
 
 ### side effects
-Even though LISP is a purely functional language we still need side effects for things such
-as `define` which will populate the **global** association list. For that I implement a state
-monad of sorts. That's because after each call to `eval`, it not only returns the expression 
+Right now the only function which produces a side effect is `define` which will populate the **global** association list.
+For that I implement a state monad of sorts. That's because after each call to `eval`, it not only returns the resulting expression 
 but also the new association list which will be used in later calls to `eval` for the REPL.
 
 
