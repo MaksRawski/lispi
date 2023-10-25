@@ -10,6 +10,8 @@ use lispi::{
     parser::parse,
     types::{NullableList, NIL},
 };
+use rustyline::Config;
+use rustyline::history::MemHistory;
 use rustyline::{error::ReadlineError, Editor};
 
 fn main() {
@@ -50,7 +52,7 @@ fn main() {
         }
     }
 
-    let mut rl = Editor::new().unwrap();
+    let mut rl = Editor::with_history(Config::default(), MemHistory::default()).unwrap();
     rl.set_helper(Some(MyHelper::new()));
 
     loop {
