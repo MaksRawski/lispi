@@ -59,6 +59,7 @@ pub enum SpecialForm {
     COND,
     AND,
     OR,
+    LIST,
     PROG,
     LABEL,
     LAMBDA,
@@ -76,6 +77,7 @@ impl SpecialForm {
             SpecialForm::LABEL => handle_label(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::LAMBDA => handle_lambda(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::DEFINE => define_fn(e_list, a).map(|(e, a)| (e, a.into())),
+            SpecialForm::LIST => handle_list(e_list, a.clone()).map(|e| (e, a)),
             SpecialForm::PROG => todo!(),
         }
     }
@@ -86,7 +88,6 @@ pub enum BuiltinFunc {
     EQUAL,
     EQ1,
     ATTRIB, // NOTE: define is better so this has low priority
-    LIST,
     APPEND,
     SUBST,
     SUBLIS,
@@ -110,7 +111,6 @@ impl BuiltinFunc {
             BuiltinFunc::EXPT => expt_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EQ1 => todo!(),
             BuiltinFunc::ATTRIB => todo!(),
-            BuiltinFunc::LIST => todo!(),
             BuiltinFunc::APPEND => todo!(),
             BuiltinFunc::SUBST => todo!(),
             BuiltinFunc::SUBLIS => todo!(),
