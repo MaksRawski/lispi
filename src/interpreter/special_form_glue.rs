@@ -24,9 +24,9 @@ pub(crate) fn handle_cond(e_list: List, a: NullableList) -> Option<SExpression> 
     }
 }
 
-/// The arguments of and are evaluated in sequence, from left to right,
+/// The arguments of `and` are evaluated in sequence, from left to right,
 /// until one is found that is false, or until the end of the list is reached.
-/// The value of and is false or true respectively.
+/// The value of `and` is false or true respectively.
 pub(crate) fn handle_and(e_list: List, a: NullableList) -> Option<SExpression> {
     let h = eval(car(e_list.clone()), a.clone())?.0;
 
@@ -40,9 +40,9 @@ pub(crate) fn handle_and(e_list: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-/// The arguments of and are evaluated in sequence, from left to right,
-/// until one is found that is false, or until the end of the list is reached.
-/// The value of and is false or true respectively.
+/// The arguments of `or` are evaluated in sequence, from left to right,
+/// until one is found that is true, or until the end of the list is reached.
+/// The value of `or` is true or false respectively.
 pub(crate) fn handle_or(e_list: List, a: NullableList) -> Option<SExpression> {
     let h = eval(car(e_list.clone()), a.clone())?.0;
 
