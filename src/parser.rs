@@ -13,6 +13,7 @@ pub fn parse(s: &str) -> Option<SExpression> {
         error!("Parenthesis count mismatch!");
         return None;
     };
+    let s = &sanitize(s);
     if let Some(t) = find_invalid_token(s) {
         error!("Invalid token: {}", t);
         return None;
@@ -22,6 +23,13 @@ pub fn parse(s: &str) -> Option<SExpression> {
     } else {
         parse_atom(s).map(|atom| atom.into())
     }
+}
+
+fn sanitize(s: &str) -> String {
+    s.replace(",", " ")
+        .lines()
+        .filter(|l| !l.starts_with(";"))
+        .collect()
 }
 
 fn check_parenthesis(s: &str) -> bool {
@@ -36,7 +44,7 @@ fn find_invalid_token(s: &str) -> Option<char> {
 
 fn parse_atom(s: &str) -> Option<Atom> {
     parse_as_keyword(s).or_else(|| {
-        parse_as_number(s).or_else(|| parse_as_string(s).or_else(|| parse_as_other_symbol(s)))
+        parse_as_number(s).or_else(|| parse_as_other_symbol(s))
     })
 }
 
@@ -91,23 +99,9 @@ fn parse_as_number(s: &str) -> Option<Atom> {
     )
 }
 
-fn parse_as_string(s: &str) -> Option<Atom> {
-    if s.chars().filter(|c| *c == '"').count() % 2 == 1 {
-        error!("Uneven number of quote marks: {}", s);
-        return None;
-    }
-    s.strip_prefix('"')?.strip_suffix('"').map_or_else(
-        || {
-            error!("Missing a quote mark at the end of: {}", s);
-            None
-        },
-        |str| Some(Symbol::Other(str.to_string()).into()),
-    )
-}
-
 fn parse_as_other_symbol(s: &str) -> Option<Atom> {
     if s.chars().filter(|c| c.is_ascii_alphanumeric()).count() == s.len() {
-        Some(Atom::Symbol(Symbol::Other(s.to_string())))
+        Some(Atom::Symbol(Symbol::Other(s.to_uppercase())))
     } else {
         error!("Not a valid symbol: {}", s);
         None
@@ -325,5 +319,12 @@ mod test_parser {
         assert_eq!(parse("\""), None);
         assert_eq!(parse("A\""), None);
         assert_eq!(parse("\"A"), None);
+    }
+    #[test]
+    fn test_sanitization() {
+        assert_eq!(
+            parse(";this is a comment\n(this,is,an,expression)"),
+            Some(list!["this", "is", "an", "expression"].into())
+        );
     }
 }
