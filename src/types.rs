@@ -97,6 +97,7 @@ pub enum BuiltinFunc {
     SUM,
     PRDCT,
     EXPT,
+    TRACKLIST,
     SELECT, // assoc_v
     CONC,   // technically a special form
 }
@@ -117,6 +118,7 @@ impl BuiltinFunc {
             BuiltinFunc::SASSOC => todo!(),
             BuiltinFunc::SELECT => todo!(),
             BuiltinFunc::CONC => todo!(),
+            BuiltinFunc::TRACKLIST => tracklist_fn(e_list).map(|e| (e.into(), a)),
             BuiltinFunc::NULL => compose_car_cdr("cadr", e_list).map(|arg| {
                 let arg = eval(arg, a.clone())?.0;
                 Some(((arg == 0.into() || arg == NIL.into()).into(), a))

@@ -24,6 +24,8 @@ use super::special_form_glue::*;
 //     }
 // }
 
+pub static mut TRACKLIST: Vec<Atom> = Vec::new();
+
 // TODO: use Cow here for the returned `a`
 /// evaluates an expression using association list `a` and returns the S-expression
 /// and the new association list if `e` was evaluated succesfully
@@ -37,16 +39,33 @@ pub fn eval(e: SExpression, a: NullableList) -> Option<(SExpression, NullableLis
             NullableList::NIL => Some((e_atom.into(), a)),
         },
         SExpression::List(e_list) => match car(e_list.clone()) {
-            SExpression::Atom(car_e) => match car_e {
-                Atom::Symbol(Symbol::SpecialForm(s)) => s.eval(e_list, a),
-                Atom::Symbol(Symbol::ElementaryFunction(f)) => f.eval(e_list, a),
-                Atom::Symbol(Symbol::BuiltinFunc(f)) => f.eval(e_list, a),
-                Atom::Symbol(Symbol::Other(s)) => handle_other_symbol(s, e_list, a),
-                _ => {
-                    log::error!("Tried to use {} like a function", e_list);
-                    None
+            SExpression::Atom(function) => {
+                // accessing mutable statics is unsafe because it can cause undefined behaviour in mult-threaded applications
+                // however since this entire project is single-threaded i consider this to be safe :)
+                unsafe {
+                    if TRACKLIST.contains(&function) {
+                        log::info!("ENTERING {e_list}");
+                    }
                 }
-            },
+                match function.clone() {
+                    Atom::Symbol(Symbol::SpecialForm(s)) => s.eval(e_list.clone(), a),
+                    Atom::Symbol(Symbol::ElementaryFunction(f)) => f.eval(e_list.clone(), a),
+                    Atom::Symbol(Symbol::BuiltinFunc(f)) => f.eval(e_list.clone(), a),
+                    Atom::Symbol(Symbol::Other(s)) => handle_other_symbol(s, e_list.clone(), a),
+                    _ => {
+                        log::error!("Tried to use {} like a function", e_list);
+                        None
+                    }
+                }
+                .map(|v| {
+                    unsafe {
+                        if TRACKLIST.contains(&function) {
+                            log::info!("END OF {e_list}, VALUE IS\n{}", v.0);
+                        }
+                    }
+                    v
+                })
+            }
             SExpression::List(compound_func) => match car(compound_func.clone()) {
                 SExpression::Atom(Atom::Symbol(Symbol::SpecialForm(sf))) => sf.eval(e_list, a),
                 SExpression::Atom(Atom::Number(_)) => {

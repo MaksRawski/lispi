@@ -3,7 +3,7 @@ use crate::{
     list,
     list_macros::compose_car_cdr,
     recursive_functions::equal,
-    types::{Atom, List, NullableList, SExpression, SpecialForm},
+    types::{Atom, BuiltinFunc, List, NullableList, SExpression, SpecialForm},
 };
 
 use super::eval;
@@ -134,6 +134,40 @@ pub(crate) fn expt_fn(e: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
+pub(crate) fn tracklist_fn(e_list: List) -> Option<List> {
+    // we're going to run this function recursively so we need to check if it's
+    // the first call or another one
+    let args = if car(e_list.clone()) == BuiltinFunc::TRACKLIST.into() {
+        match cdr(e_list.clone()) {
+            SExpression::Atom(_) => {
+                log::error!("TRACKLIST expects at least one function name as an argument.");
+                return None;
+            }
+            SExpression::List(l) => l,
+        }
+    } else {
+        e_list.clone()
+    };
+    match car(args.clone()) {
+        SExpression::Atom(fun) => {
+            unsafe {
+                if !eval::TRACKLIST.contains(&fun) {
+                    eval::TRACKLIST.push(fun.clone());
+                }
+            }
+            match cdr(args) {
+                SExpression::List(tail) => Some(cons(fun, tracklist_fn(tail)?)),
+                SExpression::Atom(Atom::NIL) => Some(list![fun]),
+                SExpression::Atom(a) => todo!("???: {a}"),
+            }
+        }
+        SExpression::List(arg) => {
+            log::error!("TRACKLIST requires its arguments to be atoms, provided: {arg}");
+            None
+        }
+    }
+}
+
 /// define's argument is a list of pairs ((u1, v1), (u2, v2), ...)
 /// where each u is a name and each v is a λ-expression or a function
 ///
@@ -246,6 +280,45 @@ fn test_expt_fn() {
 }
 
 #[test]
+fn test_tracklist_fn() {
+    use crate::types::NIL;
+    use std::io::{Read, Write};
+
+    const LOGGER_PATH: &'static str = "/tmp/lispi_tracklist_test";
+    let mut logger_builder = env_logger::Builder::new();
+    let logger_output = std::fs::File::create(LOGGER_PATH).unwrap();
+
+    logger_builder
+        .target(env_logger::Target::Pipe(Box::new(logger_output)))
+        .filter_level(log::LevelFilter::Info)
+        .format(|buf, record| writeln!(buf, "{}", record.args()));
+
+    fn read_logger_output() -> String {
+        let mut logger_output = std::fs::File::open(LOGGER_PATH).unwrap();
+        logger_output.sync_data().unwrap();
+        let mut s = String::new();
+        logger_output.read_to_string(&mut s).unwrap();
+        s
+    }
+
+    assert_eq!(
+        tracklist_fn(list![
+            BuiltinFunc::TRACKLIST,
+            BuiltinFunc::SUM,
+            BuiltinFunc::PRDCT
+        ]),
+        Some(list![BuiltinFunc::SUM, BuiltinFunc::PRDCT])
+    );
+    assert_eq!(
+        eval(list![BuiltinFunc::SUM, 2, 2].into(), NIL.into()).map(|(e, _)| e),
+        Some(4.into())
+    );
+    assert_eq!(&read_logger_output(), "LOL");
+
+    // std::fs::remove_file(LOGGER_PATH).unwrap();
+}
+
+#[test]
 fn test_define_fn() {
     use crate::types::NIL;
 
@@ -254,7 +327,10 @@ fn test_define_fn() {
             list![SpecialForm::DEFINE, list!["first", ElementaryFunction::CAR]],
             NIL.into()
         ),
-        Some(("first".into(), list![cons("first", ElementaryFunction::CAR)]))
+        Some((
+            "first".into(),
+            list![cons("first", ElementaryFunction::CAR)]
+        ))
     );
 
     let ff = list![
@@ -288,9 +364,9 @@ fn test_define_fn() {
             ],
             NIL.into()
         ),
-        Some(("first".into(), list![
-            cons("first", ElementaryFunction::CAR),
-            cons("ff", ff)
-        ]))
+        Some((
+            "first".into(),
+            list![cons("first", ElementaryFunction::CAR), cons("ff", ff)]
+        ))
     );
 }
