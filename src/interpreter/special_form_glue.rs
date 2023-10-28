@@ -61,7 +61,7 @@ pub(crate) fn handle_list(e_list: List, a: NullableList) -> Option<SExpression> 
     // we're going to run this function recursively so we need to check if it's
     // the first call or another one
     let args = if car(e_list.clone()) == SpecialForm::LIST.into() {
-        match cdr(e_list.clone()) {
+        match cdr(e_list) {
             SExpression::Atom(_) => {
                 log::error!("LIST expects at least one argument");
                 return None;
@@ -69,10 +69,10 @@ pub(crate) fn handle_list(e_list: List, a: NullableList) -> Option<SExpression> 
             SExpression::List(l) => l,
         }
     } else {
-        e_list.clone()
+        e_list
     };
     match cdr(args.clone()) {
-        SExpression::Atom(_) => Some(list![eval(car(args), a.clone()).map(|(e, _)| e)?].into()),
+        SExpression::Atom(_) => Some(list![eval(car(args), a).map(|(e, _)| e)?].into()),
         SExpression::List(cdr_args) => Some(
             cons(
                 eval(car(args), a.clone()).map(|(e, _)| e)?,

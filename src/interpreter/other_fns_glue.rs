@@ -138,7 +138,7 @@ pub(crate) fn tracklist_fn(e_list: List) -> Option<List> {
     // we're going to run this function recursively so we need to check if it's
     // the first call or another one
     let args = if car(e_list.clone()) == BuiltinFunc::TRACKLIST.into() {
-        match cdr(e_list.clone()) {
+        match cdr(e_list) {
             SExpression::Atom(_) => {
                 log::error!("TRACKLIST expects at least one function name as an argument.");
                 return None;
@@ -146,7 +146,7 @@ pub(crate) fn tracklist_fn(e_list: List) -> Option<List> {
             SExpression::List(l) => l,
         }
     } else {
-        e_list.clone()
+        e_list
     };
     match car(args.clone()) {
         SExpression::Atom(fun) => {
@@ -284,7 +284,7 @@ fn test_tracklist_fn() {
     use crate::types::NIL;
     use std::io::{Read, Write};
 
-    const LOGGER_PATH: &'static str = "/tmp/lispi_tracklist_test";
+    const LOGGER_PATH: &str = "/tmp/lispi_tracklist_test";
     let mut logger_builder = env_logger::Builder::new();
     let logger_output = std::fs::File::create(LOGGER_PATH).unwrap();
 

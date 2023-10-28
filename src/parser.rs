@@ -26,9 +26,9 @@ pub fn parse(s: &str) -> Option<SExpression> {
 }
 
 fn sanitize(s: &str) -> String {
-    s.replace(",", " ")
+    s.replace(',', " ")
         .lines()
-        .filter(|l| !l.starts_with(";"))
+        .filter(|l| !l.starts_with(';'))
         .collect()
 }
 
@@ -43,9 +43,7 @@ fn find_invalid_token(s: &str) -> Option<char> {
 }
 
 fn parse_atom(s: &str) -> Option<Atom> {
-    parse_as_keyword(s).or_else(|| {
-        parse_as_number(s).or_else(|| parse_as_other_symbol(s))
-    })
+    parse_as_keyword(s).or_else(|| parse_as_number(s).or_else(|| parse_as_other_symbol(s)))
 }
 
 fn parse_as_keyword(s: &str) -> Option<Atom> {
