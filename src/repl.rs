@@ -25,7 +25,7 @@ impl MyHelper {
 struct MyMatchingBracketHighlighter;
 
 #[inline]
-fn is_cursor_on_bracket(line: &str, pos: usize) -> bool{
+fn is_cursor_on_bracket(line: &str, pos: usize) -> bool {
     match line.chars().nth(pos) {
         Some(c) => c == '(' || c == ')',
         None => false,
@@ -37,13 +37,16 @@ impl Highlighter for MyMatchingBracketHighlighter {
         match find_nearest_bracket(line, pos) {
             Some(nearest_bracket_index) => {
                 let nearest_bracket = line.chars().nth(nearest_bracket_index).unwrap();
-                match find_matching_bracket(line, nearest_bracket_index){
+                match find_matching_bracket(line, nearest_bracket_index) {
                     Ok(matching_bracket_index) => {
                         let mut line = line.to_owned();
                         let matching_bracket = line.chars().nth(matching_bracket_index).unwrap();
 
                         if matching_bracket_index > nearest_bracket_index {
-                            line.replace_range(matching_bracket_index..=matching_bracket_index, &format!("\x1b[1;34m{}\x1b[0m", matching_bracket));
+                            line.replace_range(
+                                matching_bracket_index..=matching_bracket_index,
+                                &format!("\x1b[1;34m{}\x1b[0m", matching_bracket),
+                            );
                             line.replace_range(
                                 nearest_bracket_index..=nearest_bracket_index,
                                 &format!("\x1b[1;34m{}\x1b[0m", nearest_bracket),
@@ -53,15 +56,21 @@ impl Highlighter for MyMatchingBracketHighlighter {
                                 nearest_bracket_index..=nearest_bracket_index,
                                 &format!("\x1b[1;34m{}\x1b[0m", nearest_bracket),
                             );
-                            line.replace_range(matching_bracket_index..=matching_bracket_index, &format!("\x1b[1;34m{}\x1b[0m", matching_bracket));
+                            line.replace_range(
+                                matching_bracket_index..=matching_bracket_index,
+                                &format!("\x1b[1;34m{}\x1b[0m", matching_bracket),
+                            );
                         }
                         Owned(line)
                     }
                     Err(true) => {
                         let mut line = line.to_owned();
-                        line.replace_range(nearest_bracket_index..=nearest_bracket_index, &format!("\x1b[1;31m{}\x1b[0m", nearest_bracket));
+                        line.replace_range(
+                            nearest_bracket_index..=nearest_bracket_index,
+                            &format!("\x1b[1;31m{}\x1b[0m", nearest_bracket),
+                        );
                         Owned(line)
-                    },
+                    }
                     Err(false) => unreachable!(),
                 }
             }
@@ -140,17 +149,17 @@ fn test_is_cursor_on_bracket() {
     assert!(is_cursor_on_bracket("(abc (def 123))", 14));
 }
 
-fn find_nearest_bracket(line: &str, pos: usize) -> Option<usize>{
-    if is_cursor_on_bracket(line, pos){
+fn find_nearest_bracket(line: &str, pos: usize) -> Option<usize> {
+    if is_cursor_on_bracket(line, pos) {
         Some(pos)
     } else {
         let mut i = 1;
         loop {
-            if pos + i <= line.len() && is_cursor_on_bracket(line, pos+i){
+            if pos + i <= line.len() && is_cursor_on_bracket(line, pos + i) {
                 return Some(pos + i);
-            } else if pos as isize - i as isize >= 0 && is_cursor_on_bracket(line, pos-i){
-                return Some(pos - i)
-            } else if pos + i > line.len() && pos.checked_sub(i).is_none(){
+            } else if pos as isize - i as isize >= 0 && is_cursor_on_bracket(line, pos - i) {
+                return Some(pos - i);
+            } else if pos + i > line.len() && pos.checked_sub(i).is_none() {
                 return None;
             } else {
                 i += 1;
@@ -161,26 +170,26 @@ fn find_nearest_bracket(line: &str, pos: usize) -> Option<usize>{
 
 #[test]
 fn test_find_nearest_bracket() {
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 0), Some(0));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 1), Some(0));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 2), Some(0));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 3), Some(5));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 4), Some(5));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 5), Some(5));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 6), Some(5));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 7), Some(9));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 8), Some(9));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 9), Some(9));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 10), Some(11));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 11), Some(11));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 12), Some(11));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 13), Some(15));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 14), Some(15));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 15), Some(15));
-   assert_eq!(find_nearest_bracket("(abc (def) (123))", 16), Some(16));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 0), Some(0));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 1), Some(0));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 2), Some(0));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 3), Some(5));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 4), Some(5));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 5), Some(5));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 6), Some(5));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 7), Some(9));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 8), Some(9));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 9), Some(9));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 10), Some(11));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 11), Some(11));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 12), Some(11));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 13), Some(15));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 14), Some(15));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 15), Some(15));
+    assert_eq!(find_nearest_bracket("(abc (def) (123))", 16), Some(16));
 
-   assert_eq!(find_nearest_bracket("abc", 0), None);
-   assert_eq!(find_nearest_bracket("abc", 4), None);
-   assert_eq!(find_nearest_bracket("abc () def", 0), Some(4));
-   assert_eq!(find_nearest_bracket("abc () def", 9), Some(5));
+    assert_eq!(find_nearest_bracket("abc", 0), None);
+    assert_eq!(find_nearest_bracket("abc", 4), None);
+    assert_eq!(find_nearest_bracket("abc () def", 0), Some(4));
+    assert_eq!(find_nearest_bracket("abc () def", 9), Some(5));
 }

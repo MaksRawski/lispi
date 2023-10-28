@@ -1,8 +1,9 @@
 use crate::{
     elementary_functions::{car, cdr, cons},
+    list,
     list_functions::{append, assoc_v, pair},
     list_macros::compose_car_cdr,
-    types::*, list,
+    types::*,
 };
 
 use super::eval;
@@ -56,7 +57,7 @@ pub(crate) fn handle_or(e_list: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-pub(crate) fn handle_list(e_list: List, a: NullableList) -> Option<SExpression>{
+pub(crate) fn handle_list(e_list: List, a: NullableList) -> Option<SExpression> {
     // we're going to run this function recursively so we need to check if it's
     // the first call or another one
     let args = if car(e_list.clone()) == SpecialForm::LIST.into() {
@@ -70,9 +71,15 @@ pub(crate) fn handle_list(e_list: List, a: NullableList) -> Option<SExpression>{
     } else {
         e_list.clone()
     };
-    match cdr(args.clone()){
+    match cdr(args.clone()) {
         SExpression::Atom(_) => Some(list![eval(car(args), a.clone()).map(|(e, _)| e)?].into()),
-        SExpression::List(cdr_args) => Some(cons(eval(car(args), a.clone()).map(|(e, _)| e)?, handle_list(cdr_args, a)?).into())
+        SExpression::List(cdr_args) => Some(
+            cons(
+                eval(car(args), a.clone()).map(|(e, _)| e)?,
+                handle_list(cdr_args, a)?,
+            )
+            .into(),
+        ),
     }
 }
 

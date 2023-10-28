@@ -10,8 +10,8 @@ use lispi::{
     parser::parse,
     types::{NullableList, NIL},
 };
-use rustyline::Config;
 use rustyline::history::MemHistory;
+use rustyline::Config;
 use rustyline::{error::ReadlineError, Editor};
 
 fn main() {
