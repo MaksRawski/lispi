@@ -1,4 +1,5 @@
 use std::io;
+use std::io::Write;
 use std::process::exit;
 
 use clap::{App, Arg};
@@ -16,8 +17,15 @@ use rustyline::{error::ReadlineError, Editor};
 
 fn main() {
     env_logger::builder()
-        .format_timestamp(None)
-        .format_target(false)
+        .filter_level(log::LevelFilter::Info)
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{}: {}",
+                buf.default_styled_level(record.level()),
+                record.args(),
+            )
+        })
         .init();
 
     let args = App::new("lispi")

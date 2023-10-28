@@ -87,7 +87,6 @@ impl SpecialForm {
 pub enum BuiltinFunc {
     EQUAL,
     EQ1,
-    ATTRIB, // NOTE: define is better so this has low priority
     APPEND,
     SUBST,
     SUBLIS,
@@ -98,6 +97,7 @@ pub enum BuiltinFunc {
     PRDCT,
     EXPT,
     TRACKLIST,
+    ERROR,
     SELECT, // assoc_v
     CONC,   // technically a special form
 }
@@ -111,7 +111,6 @@ impl BuiltinFunc {
             BuiltinFunc::EQUAL => equal_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EXPT => expt_fn(e_list, a.clone()).map(|e| (e, a)),
             BuiltinFunc::EQ1 => todo!(),
-            BuiltinFunc::ATTRIB => todo!(),
             BuiltinFunc::APPEND => todo!(),
             BuiltinFunc::SUBST => todo!(),
             BuiltinFunc::SUBLIS => todo!(),
@@ -119,6 +118,16 @@ impl BuiltinFunc {
             BuiltinFunc::SELECT => todo!(),
             BuiltinFunc::CONC => todo!(),
             BuiltinFunc::TRACKLIST => tracklist_fn(e_list).map(|e| (e.into(), a)),
+            BuiltinFunc::ERROR => {
+                match compose_car_cdr("cadr", e_list.clone()) {
+                    Some(arg) => match eval(arg, a) {
+                        Some(v) => log::error!("(ERROR {})", v.0),
+                        None => log::error!("{e_list}"),
+                    },
+                    None => log::error!("(ERROR)"),
+                }
+                None
+            }
             BuiltinFunc::NULL => compose_car_cdr("cadr", e_list).map(|arg| {
                 let arg = eval(arg, a.clone())?.0;
                 Some(((arg == 0.into() || arg == NIL.into()).into(), a))

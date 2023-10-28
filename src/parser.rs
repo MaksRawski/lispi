@@ -78,6 +78,7 @@ fn parse_as_keyword(s: &str) -> Option<Atom> {
         "PRDCT" => Some(BuiltinFunc::PRDCT.into()),
         "EXPT" => Some(BuiltinFunc::EXPT.into()),
         "TRACKLIST" => Some(BuiltinFunc::TRACKLIST.into()),
+        "ERROR" => Some(BuiltinFunc::ERROR.into()),
 
         "T" => Some(T.into()),
         "F" => Some(F.into()),
