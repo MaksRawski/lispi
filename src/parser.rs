@@ -246,14 +246,14 @@ mod test_parser {
         );
         assert_eq!(
             parse("(atom x)"),
-            Some(list![ElementaryFunction::ATOM, Symbol::Other("x".to_string())].into())
+            Some(list![ElementaryFunction::ATOM, Symbol::Other("X".to_string())].into())
         );
         assert_eq!(
             parse("(atom (quote x))"),
             Some(
                 list![
                     ElementaryFunction::ATOM,
-                    list![SpecialForm::QUOTE, Symbol::Other("x".to_string())]
+                    list![SpecialForm::QUOTE, Symbol::Other("X".to_string())]
                 ]
                 .into()
             )
@@ -317,7 +317,7 @@ mod test_parser {
     fn test_sanitization() {
         assert_eq!(
             parse(";this is a comment\n(this,is,an,expression)"),
-            Some(list!["this", "is", "an", "expression"].into())
+            Some(list!["THIS", "IS", "AN", "EXPRESSION"].into())
         );
     }
 }
