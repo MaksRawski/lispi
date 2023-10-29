@@ -292,7 +292,8 @@ fn test_tracklist_fn() {
     logger_builder
         .target(env_logger::Target::Pipe(Box::new(logger_output)))
         .filter_level(log::LevelFilter::Info)
-        .format(|buf, record| writeln!(buf, "{}", record.args()));
+        .format(|buf, record| writeln!(buf, "{}", record.args()))
+        .init();
 
     fn read_logger_output() -> String {
         let mut logger_output = std::fs::File::open(LOGGER_PATH).unwrap();
@@ -314,9 +315,11 @@ fn test_tracklist_fn() {
         eval(list![BuiltinFunc::SUM, 2, 2].into(), &NIL.into()),
         Some((4.into(), Borrowed(&NIL.into())))
     );
-    assert_eq!(&read_logger_output(), "LOL");
-
-    // std::fs::remove_file(LOGGER_PATH).unwrap();
+    assert_eq!(
+        &read_logger_output(),
+        "ENTERING [SUM, 2, 2]\nEND OF [SUM, 2, 2], VALUE IS\n4\n"
+    );
+    std::fs::remove_file(LOGGER_PATH).unwrap();
 }
 
 #[test]

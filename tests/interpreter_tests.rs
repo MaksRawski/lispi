@@ -76,7 +76,7 @@ fn test_parse_eval_define_ff() {
     let (_, a_list) = eval(ff_def, &nil).unwrap();
     let ff_test = parse("(ff (quote ((a b) c)))").unwrap();
 
-    assert_eq!(dbg!(dbg!(ff_test).eval(&a_list)), Some("a".into()));
+    assert_eq!(dbg!(dbg!(ff_test).eval(&a_list)), Some("A".into()));
 }
 
 #[test]
