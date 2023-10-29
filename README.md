@@ -85,6 +85,12 @@ it substitutes them inside the expression and then evaluates the expression itse
 - `NULL`   - returns T if NIL or 0 else F
 - `EQUAL`  - compares two expressions
 - `LIST`   - creates a list with the arguments provided
+- `ERROR`  - allows the program to exit early
+- `TRACKLIST` - Takes function names as arguments and returns them as a list.
+Anytime a function that is `TRACKLIST`ed is `eval`'d two messages will be printed to the screen:
+first one before evaluation with the name of the function and its arguments,
+second one after evaluation with the value that it returned.
+
 
 ## Implementation
 Because I'm using rust, which is already an abstraction over assembly, I didn't have to have the exact same structure as the one shown in the manual.

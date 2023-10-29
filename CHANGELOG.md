@@ -1,3 +1,12 @@
+# 0.3.2
++ parser
+  - lines (both in files and REPL) starting with `;` will be interpreted as comments
+  - `,` can now be used as a seperator - an alternative to whitespace
++ functions added:
+  - TRACKLIST, ERROR
+  - LIST
++ performance improved by over 16% 🥳
+
 # 0.3.1
 + functions added:
   - CAR CDR compositions
