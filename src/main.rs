@@ -44,13 +44,15 @@ fn main() {
 
     let mut a: NullableList = NIL.into();
     if let Some(filename) = args.value_of("FILE") {
-        if eval_file(filename, &mut NIL.into(), &mut io::stdout()).is_some() {
+        if eval_file(filename, &mut io::stdout()).is_some() {
             exit(0);
         } else {
             exit(1);
         }
     } else if let Some(load_file) = args.value_of("load_file") {
-        eval_file(load_file, &mut a, &mut Vec::new());
+        if let Some(a_list) = eval_file(load_file, &mut Vec::new()) {
+            a = a_list;
+        }
         if let Some(symbols) = get_bound_symbols(&a) {
             print!("Loaded symbols: ");
             for symbol in symbols {
@@ -69,9 +71,9 @@ fn main() {
             Ok(line) => {
                 rl.add_history_entry(line.as_str()).unwrap();
                 match parse(&line) {
-                    Some(prog) => match eval(prog, a.clone()) {
+                    Some(prog) => match eval(prog, &a) {
                         Some((result, new_a_list)) => {
-                            a = new_a_list;
+                            a = new_a_list.into_owned();
                             println!("{}", result)
                         }
                         None => {

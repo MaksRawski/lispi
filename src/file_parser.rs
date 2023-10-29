@@ -1,7 +1,7 @@
 use crate::elementary_functions::cdr;
 use crate::parser::parse;
 use crate::repl::find_matching_bracket;
-use crate::types::{Atom, NullableList, SExpression, Symbol};
+use crate::types::{Atom, NullableList, SExpression, Symbol, NIL};
 use crate::{interpreter::eval, list_macros::compose_car_cdr};
 use std::{io::Write, ops::RangeInclusive};
 
@@ -75,7 +75,7 @@ fn test_split_sexps() {
     assert_eq!(split_sexps("(123"), None);
 }
 
-pub fn eval_file<W>(filename: &str, a_list: &mut NullableList, output: &mut W) -> Option<()>
+pub fn eval_file<W>(filename: &str, output: &mut W) -> Option<NullableList>
 where
     W: Write,
 {
@@ -88,20 +88,21 @@ where
     };
     let sexp_slices = split_sexps(&s)?;
 
+    let mut a: NullableList = NIL.into();
     for slice in sexp_slices {
         // TODO: if there is error with parsing it would be nice to show the coordinates of where it occured
         let sexp = parse(slice)?;
-        let (res, new_a_list) = eval(sexp, a_list.clone())?;
-        *a_list = new_a_list;
+        let (res, new_a_list) = eval(sexp, &a)?;
+        a = new_a_list.into_owned();
 
         writeln!(output, "{}", res).unwrap();
     }
-    Some(())
+    Some(a)
 }
 
 pub fn get_bound_symbols(a: &NullableList) -> Option<Vec<String>> {
     match a {
-        NullableList::List(l) => match compose_car_cdr("caar", l.clone()) {
+        NullableList::List(l) => match compose_car_cdr("caar", l) {
             Some(SExpression::Atom(Atom::Symbol(Symbol::Other(s)))) => {
                 let mut v = vec![s];
                 let rest = cdr(l.clone());

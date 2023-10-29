@@ -54,16 +54,16 @@ fn test_list_macro() {
 ///
 /// let c = cons(cons(1,2), cons(3,4));
 ///
-/// assert_eq!(compose_car_cdr("caar", c.clone()), Some(1.into()));
-/// assert_eq!(compose_car_cdr("cdar", c.clone()), Some(2.into()));
-/// assert_eq!(compose_car_cdr("cadr", c.clone()), Some(3.into()));
-/// assert_eq!(compose_car_cdr("cddr", c.clone()), Some(4.into()));
+/// assert_eq!(compose_car_cdr("caar", &c), Some(1.into()));
+/// assert_eq!(compose_car_cdr("cdar", &c), Some(2.into()));
+/// assert_eq!(compose_car_cdr("cadr", &c), Some(3.into()));
+/// assert_eq!(compose_car_cdr("cddr", &c), Some(4.into()));
 /// ```
-pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpression> {
+pub fn compose_car_cdr(car_cdr_composition: &str, list: &List) -> Option<SExpression> {
     if car_cdr_composition.to_lowercase() == "car" {
-        return Some(car(list));
+        return Some(car(list.clone()));
     } else if car_cdr_composition.to_lowercase() == "cdr" {
-        return Some(cdr(list));
+        return Some(cdr(list.clone()));
     }
 
     // skip the inner most car/cdr
@@ -78,16 +78,16 @@ pub fn compose_car_cdr(car_cdr_composition: &str, list: List) -> Option<SExpress
     );
 
     let next_list = if car_cdr_composition.to_lowercase().ends_with("ar") {
-        car(list)
+        car(list.clone())
     } else if car_cdr_composition.to_lowercase().ends_with("dr") {
-        cdr(list)
+        cdr(list.clone())
     } else {
         log::error!("Tried to apply {} to: {}", car_cdr_composition, list);
         return None;
     };
 
     if let SExpression::List(l) = next_list {
-        compose_car_cdr(&next_composition, l)
+        compose_car_cdr(&next_composition, &l)
     } else {
         None
     }

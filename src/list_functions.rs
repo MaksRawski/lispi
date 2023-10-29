@@ -106,7 +106,7 @@ pub fn pairlis(x: SExpression, y: SExpression, a: List) -> List {
 /// In the original paper `assoc_v` was specified as `assoc`, but this version of `assoc`
 /// taken from the programmer's manual just seems to be more convenient.
 pub fn assoc(x: SExpression, a: List) -> Option<List> {
-    if equal(compose_car_cdr("caar", a.clone())?, x.clone()) {
+    if equal(compose_car_cdr("caar", &a)?, x.clone()) {
         match car(a.clone()) {
             SExpression::List(car_a) => Some(car_a),
             SExpression::Atom(_) => panic!("Invalid alist: {}", a),
@@ -127,7 +127,7 @@ pub fn assoc_v(x: Atom, y: List) -> Option<SExpression> {
             if eq(caar_y, x.clone()) {
                 // the paper mentions cadar here but what they probably meant is cdar
                 // as cadar doesn't even make sense in their example
-                compose_car_cdr("cdar", y.clone()).or_else(|| {
+                compose_car_cdr("cdar", &y).or_else(|| {
                     log::error!("No value is associated with {x} in {y}.");
                     None
                 })
