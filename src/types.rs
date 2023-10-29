@@ -1,4 +1,8 @@
-use std::fmt::{Debug, Display};
+use std::{
+    borrow::Cow,
+    borrow::Cow::*,
+    fmt::{Debug, Display},
+};
 
 use crate::{
     elementary_functions::{car, cdr},
@@ -39,15 +43,15 @@ impl Debug for ElementaryFunction {
 
 use crate::interpreter::elementary_fns_glue::*;
 impl ElementaryFunction {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+    pub fn eval(self, e_list: List, a: &NullableList) -> Option<(SExpression, &NullableList)> {
         match self {
-            ElementaryFunction::ATOM => atom_fn(e_list, a.clone()).map(|e| (e, a)),
-            ElementaryFunction::EQ => eq_fn(e_list, a.clone()).map(|e| (e, a)),
-            ElementaryFunction::CAR => car_fn(e_list, a.clone()).map(|e| (e, a)),
-            ElementaryFunction::CDR => cdr_fn(e_list, a.clone()).map(|e| (e, a)),
-            ElementaryFunction::CONS => cons_fn(e_list, a.clone()).map(|e| (e, a)),
+            ElementaryFunction::ATOM => atom_fn(e_list, a).map(|e| (e, a)),
+            ElementaryFunction::EQ => eq_fn(e_list, a).map(|e| (e, a)),
+            ElementaryFunction::CAR => car_fn(e_list, a).map(|e| (e, a)),
+            ElementaryFunction::CDR => cdr_fn(e_list, a).map(|e| (e, a)),
+            ElementaryFunction::CONS => cons_fn(e_list, a).map(|e| (e, a)),
             ElementaryFunction::CarCdrComposition(c) => {
-                car_cdr_composition(&c, e_list, a.clone()).map(|e| (e, a))
+                car_cdr_composition(&c, e_list, a).map(|e| (e, a))
             }
         }
     }
@@ -68,16 +72,20 @@ pub enum SpecialForm {
 
 use crate::interpreter::special_form_glue::*;
 impl SpecialForm {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+    pub fn eval(
+        self,
+        e_list: List,
+        a: &NullableList,
+    ) -> Option<(SExpression, Cow<'_, NullableList>)> {
         match self {
-            SpecialForm::QUOTE => handle_quote(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::COND => handle_cond(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::AND => handle_and(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::OR => handle_or(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::LABEL => handle_label(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::LAMBDA => handle_lambda(e_list, a.clone()).map(|e| (e, a)),
-            SpecialForm::DEFINE => define_fn(e_list, a).map(|(e, a)| (e, a.into())),
-            SpecialForm::LIST => handle_list(e_list, a.clone()).map(|e| (e, a)),
+            SpecialForm::QUOTE => handle_quote(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::COND => handle_cond(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::AND => handle_and(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::OR => handle_or(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::LABEL => handle_label(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::LAMBDA => handle_lambda(e_list, a).map(|e| (e, Borrowed(a))),
+            SpecialForm::DEFINE => define_fn(e_list, a).map(|(e, a)| (e, Owned(a.into()))),
+            SpecialForm::LIST => handle_list(e_list, a).map(|e| (e, Borrowed(a))),
             SpecialForm::PROG => todo!(),
         }
     }
@@ -104,12 +112,12 @@ pub enum BuiltinFunc {
 
 use crate::interpreter::other_fns_glue::*;
 impl BuiltinFunc {
-    pub fn eval(self, e_list: List, a: NullableList) -> Option<(SExpression, NullableList)> {
+    pub fn eval(self, e_list: List, a: &NullableList) -> Option<(SExpression, &NullableList)> {
         match self {
-            BuiltinFunc::SUM => sum_fn(e_list, a.clone()).map(|e| (e, a)),
-            BuiltinFunc::PRDCT => prdct_fn(e_list, a.clone()).map(|e| (e, a)),
-            BuiltinFunc::EQUAL => equal_fn(e_list, a.clone()).map(|e| (e, a)),
-            BuiltinFunc::EXPT => expt_fn(e_list, a.clone()).map(|e| (e, a)),
+            BuiltinFunc::SUM => sum_fn(e_list, a).map(|e| (e, a)),
+            BuiltinFunc::PRDCT => prdct_fn(e_list, a).map(|e| (e, a)),
+            BuiltinFunc::EQUAL => equal_fn(e_list, a).map(|e| (e, a)),
+            BuiltinFunc::EXPT => expt_fn(e_list, a).map(|e| (e, a)),
             BuiltinFunc::EQ1 => todo!(),
             BuiltinFunc::APPEND => todo!(),
             BuiltinFunc::SUBST => todo!(),
@@ -119,7 +127,7 @@ impl BuiltinFunc {
             BuiltinFunc::CONC => todo!(),
             BuiltinFunc::TRACKLIST => tracklist_fn(e_list).map(|e| (e.into(), a)),
             BuiltinFunc::ERROR => {
-                match compose_car_cdr("cadr", e_list.clone()) {
+                match compose_car_cdr("cadr", &e_list) {
                     Some(arg) => match eval(arg, a) {
                         Some(v) => log::error!("(ERROR {})", v.0),
                         None => log::error!("{e_list}"),
@@ -128,12 +136,12 @@ impl BuiltinFunc {
                 }
                 None
             }
-            BuiltinFunc::NULL => compose_car_cdr("cadr", e_list).map(|arg| {
-                let arg = eval(arg, a.clone())?.0;
+            BuiltinFunc::NULL => compose_car_cdr("cadr", &e_list).map(|arg| {
+                let arg = eval(arg, a)?.0;
                 Some(((arg == 0.into() || arg == NIL.into()).into(), a))
             })?,
-            BuiltinFunc::NOT => compose_car_cdr("cadr", e_list).map(|arg| {
-                let arg = eval(arg, a.clone())?.0;
+            BuiltinFunc::NOT => compose_car_cdr("cadr", &e_list).map(|arg| {
+                let arg = eval(arg, a)?.0;
                 if arg == T.into() {
                     Some((F.into(), a))
                 } else if arg == F.into() {
@@ -458,7 +466,7 @@ impl Display for SExpression {
 }
 
 impl SExpression {
-    pub fn eval(self, a: NullableList) -> Option<SExpression> {
+    pub fn eval(self, a: &NullableList) -> Option<SExpression> {
         eval(self, a).map(|(e, _a)| e)
     }
 }

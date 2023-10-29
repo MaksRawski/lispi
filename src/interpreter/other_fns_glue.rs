@@ -8,12 +8,12 @@ use crate::{
 
 use super::eval;
 
-pub(crate) fn equal_fn(e: List, a: NullableList) -> Option<SExpression> {
+pub(crate) fn equal_fn(e: List, a: &NullableList) -> Option<SExpression> {
     match cdr(e.clone()) {
         SExpression::List(arguments) => {
-            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let x = eval(car(arguments.clone()), a)?.0;
             let y = eval(
-                compose_car_cdr("cadr", arguments).or_else(|| {
+                compose_car_cdr("cadr", &arguments).or_else(|| {
                     log::error!(
                         "EQUAL requires two arguments, but only one was provided: {}",
                         e
@@ -32,12 +32,12 @@ pub(crate) fn equal_fn(e: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-pub(crate) fn sum_fn(e: List, a: NullableList) -> Option<SExpression> {
+pub(crate) fn sum_fn(e: List, a: &NullableList) -> Option<SExpression> {
     match cdr(e.clone()) {
         SExpression::List(arguments) => {
-            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let x = eval(car(arguments.clone()), a)?.0;
             let y = eval(
-                compose_car_cdr("cadr", arguments).or_else(|| {
+                compose_car_cdr("cadr", &arguments).or_else(|| {
                     log::error!(
                         "SUM requires two arguments, but only one was provided: {}",
                         e
@@ -66,12 +66,12 @@ pub(crate) fn sum_fn(e: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-pub(crate) fn prdct_fn(e: List, a: NullableList) -> Option<SExpression> {
+pub(crate) fn prdct_fn(e: List, a: &NullableList) -> Option<SExpression> {
     match cdr(e.clone()) {
         SExpression::List(arguments) => {
-            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let x = eval(car(arguments.clone()), a)?.0;
             let y = eval(
-                compose_car_cdr("cadr", arguments).or_else(|| {
+                compose_car_cdr("cadr", &arguments).or_else(|| {
                     log::error!(
                         "SUM requires two arguments, but only one was provided: {}",
                         e
@@ -100,12 +100,12 @@ pub(crate) fn prdct_fn(e: List, a: NullableList) -> Option<SExpression> {
     }
 }
 
-pub(crate) fn expt_fn(e: List, a: NullableList) -> Option<SExpression> {
+pub(crate) fn expt_fn(e: List, a: &NullableList) -> Option<SExpression> {
     match cdr(e.clone()) {
         SExpression::List(arguments) => {
-            let x = eval(car(arguments.clone()), a.clone())?.0;
+            let x = eval(car(arguments.clone()), a)?.0;
             let y = eval(
-                compose_car_cdr("cadr", arguments).or_else(|| {
+                compose_car_cdr("cadr", &arguments).or_else(|| {
                     log::error!(
                         "SUM requires two arguments, but only one was provided: {}",
                         e
@@ -172,7 +172,7 @@ pub(crate) fn tracklist_fn(e_list: List) -> Option<List> {
 /// where each u is a name and each v is a λ-expression or a function
 ///
 /// returns the defined symbol (symbol itself not its value) and a new association list
-pub(crate) fn define_fn(e: List, a: NullableList) -> Option<(SExpression, List)> {
+pub(crate) fn define_fn(e: List, a: &NullableList) -> Option<(SExpression, List)> {
     // we're going to run this function recursively so we need to check if it's
     // the first call or another one
     let args = if car(e.clone()) == SpecialForm::DEFINE.into() {
@@ -189,14 +189,14 @@ pub(crate) fn define_fn(e: List, a: NullableList) -> Option<(SExpression, List)>
 
     if let SExpression::List(l) = car(args.clone()) {
         let u = car(l.clone());
-        let v = compose_car_cdr("cadr", l)?;
+        let v = compose_car_cdr("cadr", &l)?;
         let new_a_list = match a {
-            NullableList::List(a_list) => cons(cons(u.clone(), v), a_list),
+            NullableList::List(a_list) => cons(cons(u.clone(), v), a_list.clone()),
             NullableList::NIL => list![cons(u.clone(), v)],
         };
         // if there are more definitions
         if let SExpression::List(cdr_l) = cdr(args) {
-            define_fn(cdr_l, new_a_list.into())
+            define_fn(cdr_l, &new_a_list.into())
         } else {
             Some((u, new_a_list))
         }
@@ -216,15 +216,15 @@ fn test_equal_fn() {
                 list![SpecialForm::QUOTE, "X"],
                 list![SpecialForm::QUOTE, "X"]
             ],
-            NIL.into()
+            &NIL.into()
         ),
         Some(T.into())
     );
-    assert_eq!(equal_fn(list![BuiltinFunc::EQUAL], NIL.into()), None);
+    assert_eq!(equal_fn(list![BuiltinFunc::EQUAL], &NIL.into()), None);
     assert_eq!(
         equal_fn(
             list![BuiltinFunc::EQUAL, list![SpecialForm::QUOTE, "X"]],
-            NIL.into()
+            &NIL.into()
         ),
         None
     );
@@ -234,54 +234,55 @@ fn test_equal_fn() {
 fn test_sum_fn() {
     use crate::types::NIL;
     assert_eq!(
-        sum_fn(list![BuiltinFunc::SUM, 1.5, 2.4], NIL.into()),
+        sum_fn(list![BuiltinFunc::SUM, 1.5, 2.4], &NIL.into()),
         Some(3.9.into())
     );
     assert_eq!(
-        sum_fn(list![BuiltinFunc::SUM, 0, -42], NIL.into()),
+        sum_fn(list![BuiltinFunc::SUM, 0, -42], &NIL.into()),
         Some((-42).into())
     );
-    assert_eq!(sum_fn(list![BuiltinFunc::SUM, 0], NIL.into()), None);
-    assert_eq!(sum_fn(list![BuiltinFunc::SUM], NIL.into()), None);
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM, 0], &NIL.into()), None);
+    assert_eq!(sum_fn(list![BuiltinFunc::SUM], &NIL.into()), None);
 }
 
 #[test]
 fn test_prdct_fn() {
     use crate::types::NIL;
     assert_eq!(
-        prdct_fn(list![BuiltinFunc::PRDCT, 1.5, 2], NIL.into()),
+        prdct_fn(list![BuiltinFunc::PRDCT, 1.5, 2], &NIL.into()),
         Some(3.into())
     );
     assert_eq!(
-        prdct_fn(list![BuiltinFunc::PRDCT, -1, 0], NIL.into()),
+        prdct_fn(list![BuiltinFunc::PRDCT, -1, 0], &NIL.into()),
         Some(0.into())
     );
-    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT, 0], NIL.into()), None);
-    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT], NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT, 0], &NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::PRDCT], &NIL.into()), None);
 }
 
 #[test]
 fn test_expt_fn() {
     use crate::types::NIL;
     assert_eq!(
-        expt_fn(list![BuiltinFunc::EXPT, 2, 3], NIL.into()),
+        expt_fn(list![BuiltinFunc::EXPT, 2, 3], &NIL.into()),
         Some(8.into())
     );
     assert_eq!(
-        expt_fn(list![BuiltinFunc::EXPT, 2, 0], NIL.into()),
+        expt_fn(list![BuiltinFunc::EXPT, 2, 0], &NIL.into()),
         Some(1.into())
     );
     assert_eq!(
-        expt_fn(list![BuiltinFunc::EXPT, 9, 0.5], NIL.into()),
+        expt_fn(list![BuiltinFunc::EXPT, 9, 0.5], &NIL.into()),
         Some(3.into())
     );
-    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT, 0], NIL.into()), None);
-    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT], NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT, 0], &NIL.into()), None);
+    assert_eq!(prdct_fn(list![BuiltinFunc::EXPT], &NIL.into()), None);
 }
 
 #[test]
 fn test_tracklist_fn() {
     use crate::types::NIL;
+    use std::borrow::Cow::Borrowed;
     use std::io::{Read, Write};
 
     const LOGGER_PATH: &str = "/tmp/lispi_tracklist_test";
@@ -310,8 +311,8 @@ fn test_tracklist_fn() {
         Some(list![BuiltinFunc::SUM, BuiltinFunc::PRDCT])
     );
     assert_eq!(
-        eval(list![BuiltinFunc::SUM, 2, 2].into(), NIL.into()).map(|(e, _)| e),
-        Some(4.into())
+        eval(list![BuiltinFunc::SUM, 2, 2].into(), &NIL.into()),
+        Some((4.into(), Borrowed(&NIL.into())))
     );
     assert_eq!(&read_logger_output(), "LOL");
 
@@ -325,7 +326,7 @@ fn test_define_fn() {
     assert_eq!(
         define_fn(
             list![SpecialForm::DEFINE, list!["first", ElementaryFunction::CAR]],
-            NIL.into()
+            &NIL.into()
         ),
         Some((
             "first".into(),
@@ -349,7 +350,7 @@ fn test_define_fn() {
     assert_eq!(
         define_fn(
             list![SpecialForm::DEFINE, list!["ff", ff.clone()]],
-            NIL.into()
+            &NIL.into()
         ),
         Some(("ff".into(), list![cons("ff", ff.clone())]))
     );
@@ -362,7 +363,7 @@ fn test_define_fn() {
                 list!["ff", ff.clone()],
                 list!["first", ElementaryFunction::CAR]
             ],
-            NIL.into()
+            &NIL.into()
         ),
         Some((
             "first".into(),
