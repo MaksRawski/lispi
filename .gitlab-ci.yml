@@ -13,9 +13,11 @@ test:coverage:
       - $CARGO_HOME
   variables:
     LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+    RUSTFLAGS: "-Cinstrument-coverage"
   before_script:
     - rustup component add llvm-tools-preview
     - cargo install grcov
+    - apt update && apt install -y libxml2-utils
   script:
     - mkdir -p target/coverage
     - cargo test -- --test-threads=1
