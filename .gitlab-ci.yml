@@ -17,8 +17,8 @@ test:coverage:
     - rustup component add llvm-tools-preview
     - cargo install grcov
   script:
-    - cargo test -j 1
     - mkdir -p target/coverage
+    - cargo test -- --test-threads=1
     - grcov target/coverage --binary-path target/debug -s . -o target/coverage --keep-only 'src/*' --output-types html,cobertura
     - xmllint --xpath "concat('Coverage:', 100 * string(//coverage/@line-rate), '%')" target/coverage/cobertura.xml
 
