@@ -1,10 +1,24 @@
 # https://github.com/mozilla/grcov#grcov-with-gitlab
-build:
+image: rust:1.70
+
+stages:
+  - test
+
+test:coverage:
+  cache:
+    key:
+      files:
+        - Cargo.toml
+    paths:
+      - $CARGO_HOME
   variables:
     LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+  before_script:
+    - rustup component add llvm-tools-preview
+    - cargo install grcov
   script:
     - cargo test
-    - mkdir target/coverage
+    - mkdir -p target/coverage
     - grcov target/coverage --binary-path target/debug -s . -o target/coverage --keep-only 'src/*' --output-types html,cobertura
     - xmllint --xpath "concat('Coverage:', 100 * string(//coverage/@line-rate), '%')" target/coverage/cobertura.xml
 
