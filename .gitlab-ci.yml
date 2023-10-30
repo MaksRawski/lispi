@@ -6,9 +6,9 @@ build:
     - cargo test
     - mkdir target/coverage
     - grcov target/coverage --binary-path target/debug -s . -o target/coverage --keep-only 'src/*' --output-types html,cobertura
-    - xmllint --xpath "concat('Coverage: ', 100 * string(//coverage/@line-rate), '%')" target/coverage/cobertura.xml
+    - xmllint --xpath "concat('Coverage:', 100 * string(//coverage/@line-rate), '%')" target/coverage/cobertura.xml
 
-  coverage: '/Coverage: \d+(?:\.\d+)?/'
+  coverage: '/Coverage:\d+(?:\.\d+)?/'
   artifacts:
     paths:
       - target/coverage/
