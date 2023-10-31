@@ -3,6 +3,7 @@ image: rust:1.70
 
 stages:
   - test
+  - pages
 
 test:coverage:
   cache:
@@ -31,4 +32,12 @@ test:coverage:
     reports:
       coverage_report:
         coverage_format: cobertura
-        path: target/coverage.xml
+        path: target/coverage/cobertura.xml
+
+pages:
+  dependencies: test:coverage
+  script:
+    - mv target/coverage/html public
+  artifacts:
+    paths:
+      - public
