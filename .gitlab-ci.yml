@@ -35,6 +35,8 @@ test:coverage:
         path: target/coverage/cobertura.xml
 
 pages:
+  needs:
+    - job: test:coverage
   dependencies:
     - test:coverage
   script:
