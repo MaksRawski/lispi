@@ -13,6 +13,7 @@ test:coverage:
     paths:
       - $CARGO_HOME
   variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
     LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
     RUSTFLAGS: "-Cinstrument-coverage"
   before_script:
