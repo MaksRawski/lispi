@@ -35,7 +35,8 @@ test:coverage:
         path: target/coverage/cobertura.xml
 
 pages:
-  dependencies: test:coverage
+  dependencies:
+    - test:coverage
   script:
     - mv target/coverage/html public
   artifacts:
