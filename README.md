@@ -1,5 +1,5 @@
 # LISP I interpreter 
-[![coverage](https://gitlab.com/MaksRawski/lispi/badges/main/coverage.svg)](#)
+[![coverage](https://gitlab.com/MaksRawski/lispi/badges/main/coverage.svg)](https://maksrawski.gitlab.io/lispi/)
 
 It was the year 1960 when the brilliant mind of Paul McCarthy, from the AI reasearch team at MIT, stumbled upon something extraordinary, 
 that would change the world of computing forever. What he discovered is documented in the paper

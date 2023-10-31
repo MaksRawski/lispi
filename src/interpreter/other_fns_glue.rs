@@ -312,12 +312,16 @@ fn test_tracklist_fn() {
         Some(list![BuiltinFunc::SUM, BuiltinFunc::PRDCT])
     );
     assert_eq!(
-        eval(list![BuiltinFunc::SUM, 2, 2].into(), &NIL.into()),
-        Some((4.into(), Borrowed(&NIL.into())))
+        eval(
+            list![BuiltinFunc::SUM, list![BuiltinFunc::PRDCT, 2, 3], 2].into(),
+            &NIL.into()
+        ),
+        Some((8.into(), Borrowed(&NIL.into())))
     );
+
     assert_eq!(
         &read_logger_output(),
-        "ENTERING [SUM, 2, 2]\nEND OF [SUM, 2, 2], VALUE IS\n4\n"
+        "ENTERING [SUM, [PRDCT, 2, 3], 2]\nENTERING [PRDCT, 2, 3]\nEND OF [PRDCT, 2, 3], VALUE IS\n6\nEND OF [SUM, [PRDCT, 2, 3], 2], VALUE IS\n8\n"
     );
     std::fs::remove_file(LOGGER_PATH).unwrap();
 }
