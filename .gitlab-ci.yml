@@ -6,17 +6,18 @@ stages:
   - pages
 
 test:coverage:
+  variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo
+    LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
+    RUSTFLAGS: "-Cinstrument-coverage"
   cache:
     key:
       files:
         - Cargo.toml
     paths:
       - $CARGO_HOME
-  variables:
-    CARGO_HOME: $CI_PROJECT_DIR/.cargo
-    LLVM_PROFILE_FILE: "target/coverage/%p-%m.profraw"
-    RUSTFLAGS: "-Cinstrument-coverage"
   before_script:
+    - export PATH=$PATH:$CARGO_HOME
     - rustup component add llvm-tools-preview
     - cargo install grcov
     - apt update && apt install -y libxml2-utils
