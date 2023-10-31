@@ -37,6 +37,8 @@ test:coverage:
 pages:
   needs:
     - job: test:coverage
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   dependencies:
     - test:coverage
   script:
