@@ -1,6 +1,6 @@
 # 0.3.2
 + parser
-  - lines (both in files and REPL) starting with `;` will be interpreted as comments
+  - lines (both in files and REPL) starting with `;` will be ignored
   - `,` can now be used as a seperator - an alternative to whitespace
 + functions added:
   - TRACKLIST, ERROR
