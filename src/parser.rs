@@ -9,11 +9,11 @@ use crate::{
 };
 
 pub fn parse(s: &str) -> Option<SExpression> {
+    let s = &sanitize(s);
     if !check_parenthesis(s) {
         error!("Parenthesis count mismatch!");
         return None;
     };
-    let s = &sanitize(s);
     if let Some(t) = find_invalid_token(s) {
         error!("Invalid token: {}", t);
         return None;
@@ -28,7 +28,7 @@ pub fn parse(s: &str) -> Option<SExpression> {
 fn sanitize(s: &str) -> String {
     s.replace(',', " ")
         .lines()
-        .filter(|l| !l.starts_with(';'))
+        .map(|l| l.chars().take_while(|c| *c != ';').collect::<String>())
         .collect()
 }
 
@@ -317,6 +317,10 @@ mod test_parser {
     fn test_sanitization() {
         assert_eq!(
             parse(";this is a comment\n(this,is,an,expression)"),
+            Some(list!["THIS", "IS", "AN", "EXPRESSION"].into())
+        );
+        assert_eq!(
+            parse("(this is an expression) ;; and this is a comment"),
             Some(list!["THIS", "IS", "AN", "EXPRESSION"].into())
         );
     }
