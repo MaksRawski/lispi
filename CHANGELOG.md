@@ -1,3 +1,7 @@
+# 0.3.2-1
++ LAMBDA is now a first class citizen! /Y combinator still doesn't work though/
++ comments are now properly filtered out
+
 # 0.3.2
 + parser
   - lines (both in files and REPL) starting with `;` will be ignored

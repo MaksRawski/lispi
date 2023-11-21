@@ -1,6 +1,6 @@
 [package]
 name = "lispi"
-version = "0.3.2"
+version = "0.3.2-1"
 edition = "2021"
 license = "MIT"
 description = "Lisp I interpreter"

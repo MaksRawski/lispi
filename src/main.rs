@@ -29,7 +29,7 @@ fn main() {
         .init();
 
     let args = App::new("lispi")
-        .version("0.3.2")
+        .version("0.3.2-1")
         .arg(Arg::with_name("FILE").help("File to evaluate"))
         .arg(
             Arg::with_name("load_file")
